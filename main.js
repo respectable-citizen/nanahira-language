@@ -1,13 +1,18 @@
 const Lexer = require("./lexer");
 const Parser = require("./parser");
+const CodeGenerator = require("./code_generator");
 
 const fs = require("fs");
 
 const data = fs.readFileSync("./input.txt", {encoding: "utf8", flag: "r"});
 let lexer = new Lexer(data);
 lexer.run();
-console.log(lexer.tokens);
+
 
 let parser = new Parser(data, lexer.tokens);
 parser.run();
-console.log(JSON.stringify(parser.ast));
+
+let code_generator = new CodeGenerator(parser.ast);
+code_generator.run();
+
+console.log(code_generator.output);

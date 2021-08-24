@@ -23,7 +23,7 @@ unary := (( "!" | "-" ) unary) | primary ";"
 primary := NUMBER | "(" expression ")" ";"
 
 //Expressions
-assignmentExpression := identifierDefinition "=" expression ";"
+assignmentExpression := identifierDefinition ["=" expression] ";"
 
 */
 
@@ -131,6 +131,7 @@ class Parser {
         let block = this.parseBlock();
 
         return {
+            type: Nodes.FUNCTION_DECLARATION,
             returnType,
             identifier,
             parameters,
@@ -150,8 +151,10 @@ class Parser {
 
     parseAssignmentExpression() {
         let identifierDefinition = this.parseIdentifierDefinition();
-        this.expect(Tokens.OPERATOR_ASSIGN);
-        let expression = this.parseExpression();
+        let expression;
+        if (this.match(Tokens.OPERATOR_ASSIGN)) {
+            expression = this.parseExpression();
+        }
         this.expect(Tokens.END_OF_LINE);
 
         return {
