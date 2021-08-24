@@ -1,6 +1,5 @@
 const Tokens = require("./tokens");
 const Nodes = require("./nodes");
-const { SlowBuffer } = require("buffer");
 
 /*
 Parser grammar:
