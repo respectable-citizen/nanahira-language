@@ -7,8 +7,13 @@ so what does it support? at the moment, jack all (that would be useful to you an
 * lexing
 * parsing
   * variable assignments
-  * function declarations
+  * function declarations (with parameters)
   * expressions
+  * function calls (with arguments)
+  * return statements
+  * all these things are pretty inconsequential especially considering it doesn't actually generate code yet, but listing off a lot of things sounds impressive so get off my back
+* code generation
+  * literally it just generates a barebones assembly file with no code
 
 code generation coming soon?
 
