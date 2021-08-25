@@ -1,3 +1,8 @@
-void main() {
-    uint64 test = 1 + 4;
+int64 num() {
+    return 4 * 5;
+}
+
+int64 main() {
+    int64 test = num() + 5;
+    return test;
 }

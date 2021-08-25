@@ -5,9 +5,9 @@ const CodeGenerator = require("./code_generator");
 const fs = require("fs");
 
 const data = fs.readFileSync("./input.txt", {encoding: "utf8", flag: "r"});
+
 let lexer = new Lexer(data);
 lexer.run();
-
 
 let parser = new Parser(data, lexer.tokens);
 parser.run();

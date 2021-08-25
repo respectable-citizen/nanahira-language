@@ -6,24 +6,35 @@ Parser grammar:
 
 program := declaration*
 
-declaration := functionDeclaration
+declaration := functionDeclaration | variableDeclaration
 
-functionDeclaration := IDENTIFIER IDENTIFIER "(" [parameters] ")" block
+parameters := IDENTIFIER IDENTIFIER ("," IDENTIFIER IDENTIFIER)*
+arguments = expression ("," expression)*
 
-parameters := identifierDefinition ("," identifierDefinition)*
-block := "{" assignmentExpression* "}"
-identifierDefinition = IDENTIFIER IDENTIFIER //Data type then name
+block := "{" (variableDeclaration | statement)* "}"
 
+//Base expression
 expression := equality ";"
-equality := comparison (("!=" | "==") comparison)* ";"
-comparison := term ((">" | ">=" | "<" | "<=") term )* ";"
-term := factor (( "-" | "+" ) factor)* ";"
-factor := unary (( "/" | "*" ) unary)* ";"
-unary := (( "!" | "-" ) unary) | primary ";"
-primary := NUMBER | "(" expression ")" ";"
+equality := comparison (("!=" | "==") comparison)*
+comparison := term ((">" | ">=" | "<" | "<=") term )*
+term := factor (( "-" | "+" ) factor)*
+factor := unary (( "/" | "*" ) unary)*
+unary := (( "!" | "-" ) unary) | primary
+primary := NUMBER | "(" expression ")" | IDENTIFIER | callExpression
 
 //Expressions
-assignmentExpression := identifierDefinition ["=" expression] ";"
+assignmentExpression := IDENTIFIER ["=" expression]
+callExpression := IDENTIFIER "(" [arguments] ")"
+
+//Declarations
+functionDeclaration := IDENTIFIER IDENTIFIER "(" [parameters] ")" block
+variableDeclaration = IDENTIFIER assignmentExpression ";" //Same as assignmentExpression, but with a data type because the variable is being declared for the first time
+
+//Statements
+statement := expressionStatement | returnStatement
+
+expressionStatement := (assignmentExpression | callExpression) ";"
+returnStatement := "return" expression ";"
 
 */
 
@@ -50,6 +61,14 @@ class Parser {
         throw "TODO: Implement synchronization for errors (this will allow the compiler to keep parsing even after an error)";
     }
 
+    unexpectedToken(expectedTokenType = null) {
+        if (expectedTokenType) {
+            this.error(`Expected ${expectedTokenType} but got ${this.peek().type}`);
+        } else {
+            this.error(`Unexpected token ${this.peek().type}`);
+        }
+    }
+
     atEnd() {
         return this.peek().type == Tokens.END_OF_FILE;
     }
@@ -58,12 +77,25 @@ class Parser {
         this.pos++;
     }
 
+    peekOffset(offset) {
+        let item = this.tokens[this.pos + offset];
+        if (item) return item;
+
+        return {
+            type: Tokens.END_OF_FILE //Yes, technically this would be returned even if the error was caused by accessing a negative index. However, I don't think that can ever happen so /shrug
+        };
+    }
+
     peek() {
-        return this.tokens[this.pos];
+        return this.peekOffset(0);
+    }
+
+    peekNext() {
+        return this.peekOffset(1);
     }
 
     previous() {
-        return this.tokens[this.pos - 1];
+        return this.peekOffset(-1);
     }
 
     match(tokenTypes) {
@@ -80,7 +112,7 @@ class Parser {
     }
 
     expect(tokenType) {
-        if (!this.match(tokenType)) this.error(`Expected token ${tokenType} but got ${this.peek().type}`);
+        if (!this.match(tokenType)) this.unexpectedToken(tokenType);
         return this.previous();
     }
 
@@ -101,24 +133,22 @@ class Parser {
         return this.declarations;
     }
 
-    parseIdentifierDefinition() {
-        let dataType = this.expect(Tokens.IDENTIFIER);
-        let identifier = this.expect(Tokens.IDENTIFIER);
-        return {dataType, identifier};
+    determineDeclarationType() {
+        let token = this.peekOffset(2);
+
+        if (token.type == Tokens.LEFT_PAREN) return Nodes.FUNCTION_DECLARATION;
+        if (token.type == Tokens.OPERATOR_ASSIGN) return Nodes.VARIABLE_DECLARATION;
+
+        return Nodes.NONE;
     }
 
     parseDeclaration() {
-        return this.parseFunctionDeclaration();
-    }
+        let declarationType = this.determineDeclarationType();
 
-    parseBlock() {
-        this.expect(Tokens.LEFT_CURLY_BRACE);
+        if (declarationType == Nodes.FUNCTION_DECLARATION) return this.parseFunctionDeclaration();
+        if (declarationType == Nodes.VARIABLE_DECLARATION) return this.parseVariableDeclaration();
         
-        let lines = [];
-        while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) lines.push(this.parseAssignmentExpression());
-        
-        this.expect(Tokens.RIGHT_CURLY_BRACE);
-        return lines;
+        this.unexpectedToken();
     }
 
     parseFunctionDeclaration() {
@@ -139,18 +169,83 @@ class Parser {
         };
     }
 
+    parseVariableDeclaration() {
+        let dataType = this.get();
+        let assignment = this.parseAssignmentExpression();
+        assignment.type = Nodes.VARIABLE_DECLARATION;
+        assignment.dataType = dataType;
+        
+        return assignment;
+    }
+
+    parseStatement() {
+        if (this.peek().type == Tokens.KEYWORD_RETURN) return this.parseReturnStatement();
+        if (this.peek().type == Tokens.IDENTIFIER) return this.parseExpressionStatement();
+
+        this.unexpectedToken();
+    }
+
+    parseExpressionStatement() {
+        return this.parseAssignmentExpression();
+    }
+
+    parseReturnStatement() {
+        this.expect(Tokens.KEYWORD_RETURN);
+        let expression = this.parseExpression();
+        this.expect(Tokens.END_OF_LINE);
+
+        return {
+            type: Nodes.RETURN_STATEMENT,
+            expression
+        };
+    }
+
+    parseBlock() {
+        this.expect(Tokens.LEFT_CURLY_BRACE);
+        
+        let lines = [];
+        while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) {
+            //parse variable declaration
+            let declarationType = this.determineDeclarationType();
+            if (declarationType == Nodes.VARIABLE_DECLARATION) {
+                lines.push(this.parseVariableDeclaration());
+            } else {
+                //Parse statement
+                lines.push(this.parseStatement());
+            }
+        }
+        
+        this.expect(Tokens.RIGHT_CURLY_BRACE);
+        return lines;
+    }
+
     parseParameters() {
         let parameters = [];
+        let expectComma = false;
+
         while (this.peek().type != Tokens.RIGHT_PAREN) {
-            let identifierDefinition = this.parseIdentifierDefinition();
-            parameters.push(identifierDefinition);
+            if (expectComma) {
+                this.expect(Tokens.COMMA);
+            } else {
+                expectComma = true;
+            }
+
+            let dataType = this.get();
+            let identifier = this.get();
+
+            parameters.push({
+                type: Nodes.PARAMETER,
+                dataType,
+                identifier
+            });
         }
 
         return parameters;
     }
 
     parseAssignmentExpression() {
-        let identifierDefinition = this.parseIdentifierDefinition();
+        let identifier = this.get();
+        
         let expression;
         if (this.match(Tokens.OPERATOR_ASSIGN)) {
             expression = this.parseExpression();
@@ -159,10 +254,37 @@ class Parser {
 
         return {
             type: Nodes.ASSIGNMENT_EXPRESSION,
-            dataType: identifierDefinition.dataType,
-            identifier: identifierDefinition.identifier,
+            identifier,
             expression
         };
+    }
+
+    parseCallExpression() {
+        let identifier = this.get();
+        
+        this.expect(Tokens.LEFT_PAREN);
+        
+        let args = [];
+        if (this.peek().type != Tokens.RIGHT_PAREN) args = this.parseArguments();
+        
+        this.expect(Tokens.RIGHT_PAREN);
+        
+        return {
+            type: Nodes.CALL_EXPRESSION,
+            identifier,
+            args
+        };
+    }
+
+    parseArguments() {
+        let args = [this.parseExpression()];
+
+        while (this.peek().type != Tokens.RIGHT_PAREN) {
+            this.expect(Tokens.COMMA);
+            args.push(this.parseExpression());
+        }
+
+        return args;
     }
 
     parseExpression() {
@@ -264,8 +386,22 @@ class Parser {
             this.expect(Tokens.RIGHT_PAREN);
             return expression;
         }
+        
+        if (this.peek().type == Tokens.IDENTIFIER) {
+            if (this.peekNext().type == Tokens.LEFT_PAREN) {
+                //Call expression
+                return this.parseCallExpression();
+            } else {
+                //Variable
+                return {
+                    type: Tokens.IDENTIFIER,
+                    value: this.get()
+                };
+            }
+        }
 
-        throw `Unexpected token ${JSON.stringify(this.peek())}`;
+
+        this.unexpectedToken();
     }
 }
 

@@ -221,6 +221,11 @@ class Lexer {
                         type: Tokens.OPERATOR_BINARY_AND
                     });
                 }
+            } else if (this.peek() == ",") {
+                this.advance();
+                this.addToken({
+                    type: Tokens.COMMA
+                });
             } else {
                 if (this.isAlpha(this.peek())) {
                     let identifier = this.get();
@@ -229,10 +234,17 @@ class Lexer {
                         identifier += this.get();
                     }
 
-                    this.addToken({
-                        type: Tokens.IDENTIFIER,
-                        value: identifier
-                    });
+                    //If this matches any keywords insert a keyword, otherwise insert it as an identifier
+                    if (identifier == "return") {
+                         this.addToken({
+                            type: Tokens.KEYWORD_RETURN
+                        });
+                    } else {
+                        this.addToken({
+                            type: Tokens.IDENTIFIER,
+                            value: identifier
+                        });
+                    }
                 } else {
                     console.error(`Unexpected character "${this.peek()}" at position ${this.pos}`);
                     this.advance();
