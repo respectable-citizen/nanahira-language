@@ -65,6 +65,8 @@ class CodeGenerator {
         this.registers[register] = 1;
     }
 
+    performRAXInstruction(leftRegister, rightRegister, mnemonic) {}
+
     getFunction(identifier) {
         return this.functions.filter(node => node.identifier.value == identifier)[0];
     }
@@ -115,27 +117,11 @@ class CodeGenerator {
 
                 this.freeRegister(rightRegister);
                 return leftRegister;
-            } else if (expression.operator == Tokens.STAR) {
-                //mul expects the first operand to be in rax, rax is then set itself multipled by the 2nd operand (supplied to the mul instruction).
-                //Because of this, we must allocate a new register to save the current contents of rax.
-                let temporaryRegister = this.allocateRegister();
-                this.addInstruction(`mov ${temporaryRegister}, rax`);         //Save the current contents of rax.
-                this.addInstruction(`mul ${leftRegister}, ${rightRegister}`); //Perform the multiplication
-                this.addInstruction(`mov ${rightRegister}, ${leftRegister}`); //Move the result of the multiplication so we can move the original contents of rax back
-                this.addInstruction(`mov rax, ${temporaryRegister}`);         //Move the original contents of rax back
-
-                return rightRegister;
+            }/* else if (expression.operator == Tokens.STAR) {
+                return this.performRAXInstruction(leftRegister, rightRegister, "mul");
             } else if (expression.operator == Tokens.SLASH) {
-                //div expects the first operand to be in rax, rax is then set itself divided by the 2nd operand (supplied to the div instruction).
-                //Because of this, we must allocate a new register to save the current contents of rax.
-                let temporaryRegister = this.allocateRegister();
-                this.addInstruction(`mov ${temporaryRegister}, rax`);         //Save the current contents of rax.
-                this.addInstruction(`div ${leftRegister}, ${rightRegister}`); //Perform the multiplication
-                this.addInstruction(`mov ${rightRegister}, ${leftRegister}`); //Move the result of the multiplication so we can move the original contents of rax back
-                this.addInstruction(`mov rax, ${temporaryRegister}`);         //Move the original contents of rax back
-                
-                return rightRegister;
-            }
+                return this.performRAXInstruction(leftRegister, rightRegister, "div");
+            }*/
 
             throw "Unknown operator.";
         }
@@ -144,13 +130,13 @@ class CodeGenerator {
     }
 
     generateReturnStatement(statement) {
-        console.log(statement)
+        //console.log(statement)
     }
 
     generateBlock(block) {
         for (let statement of block) {
             if (statement.type == Nodes.VARIABLE_DECLARATION) {
-                this.generateVariableDeclaration(statement);
+                console.log(this.generateVariableDeclaration(statement));
             } else if (statement.type == Nodes.RETURN_STATEMENT) {
                 this.generateReturnStatement(statement);
             }
