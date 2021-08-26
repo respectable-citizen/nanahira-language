@@ -1,9 +1,9 @@
 # Nanahira language
 maybe you're thinking "a compiler, written in javascript? really? are you stupid?", and yeah but:
 * once the shits compiled runtime is the same, and i plan on making compilation zoomzoom fast
-* i plan on rewriting the compiler in this language once its ready
+* i also plan on rewriting the compiler in this language once its ready
 
-so what does it support? at the moment, jack all (that would be useful to you anyway), but heres the list anyway:
+so what does it support? at the moment, jack all (that would be useful to you), but heres the list anyway:
 * lexing
 * parsing
   * variable assignments
