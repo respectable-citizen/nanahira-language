@@ -49,6 +49,10 @@ class Parser {
         return this.tokens.filter(token => token.line == line);
     }
 
+    generateArrowAtPosition(position) {
+        return " ".repeat(position) + "^";
+    }
+
     error(message) {
         let lineTokens = this.getLineTokens(this.peek().line);
         let startLine = lineTokens[0].start;
@@ -56,7 +60,9 @@ class Parser {
         let line = this.code.substring(startLine, endLine);
 
         console.log(`ERROR on line ${this.peek().line}!`);
-        console.log(line);
+        console.log(line );
+        console.log(this.generateArrowAtPosition(this.peek().start - startLine));
+        console.log("");
         console.log(`Error: ${message}`);
         throw "TODO: Implement synchronization for errors (this will allow the compiler to keep parsing even after an error)";
     }
@@ -134,12 +140,14 @@ class Parser {
     }
 
     determineDeclarationType() {
+        if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
+        if (this.peekNext().type != Tokens.IDENTIFIER) return Nodes.NONE;
+        
         let token = this.peekOffset(2);
 
         if (token.type == Tokens.LEFT_PAREN) return Nodes.FUNCTION_DECLARATION;
-        if (token.type == Tokens.OPERATOR_ASSIGN) return Nodes.VARIABLE_DECLARATION;
 
-        return Nodes.NONE;
+        return Nodes.VARIABLE_DECLARATION;
     }
 
     parseDeclaration() {
@@ -205,8 +213,9 @@ class Parser {
         
         let lines = [];
         while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) {
-            //parse variable declaration
+            //Parse variable declaration
             let declarationType = this.determineDeclarationType();
+            
             if (declarationType == Nodes.VARIABLE_DECLARATION) {
                 lines.push(this.parseVariableDeclaration());
             } else {
@@ -247,7 +256,7 @@ class Parser {
         let identifier = this.get();
         
         let expression;
-        if (this.match(Tokens.OPERATOR_ASSIGN)) {
+        if (this.match(Tokens.EQUAL)) {
             expression = this.parseExpression();
         }
         this.expect(Tokens.END_OF_LINE);
@@ -294,7 +303,7 @@ class Parser {
     parseEquality() {
         let expression = this.parseComparison();
 
-        while (this.match([Tokens.OPERATOR_EQUALITY, Tokens.OPERATOR_NOT_EQUALITY])) {
+        while (this.match([Tokens.EQUAL, Tokens.BANG_EQUAL])) {
             let operator = this.previous();
             let right = this.parseComparison();
 
@@ -312,7 +321,7 @@ class Parser {
     parseComparison() {
         let expression = this.parseTerm();
 
-        while (this.match([Tokens.OPERATOR_GREATER_THAN_EQUAL, Tokens.OPERATOR_LESS_THAN_EQUAL, Tokens.OPERATOR_GREATER_THAN, Tokens.OPERATOR_LESS_THAN])) {
+        while (this.match([Tokens.GREATER_EQUAL, Tokens.LESS_EQUAL, Tokens.GREATER, Tokens.LESS])) {
             let operator = this.previous();
             let right = this.parseTerm();
 
@@ -330,7 +339,7 @@ class Parser {
     parseTerm() {
         let expression = this.parseFactor();
 
-        while (this.match([Tokens.OPERATOR_ADD, Tokens.OPERATOR_SUBTRACT])) {
+        while (this.match([Tokens.PLUS, Tokens.MINUS])) {
             let operator = this.previous();
             let right = this.parseFactor();
 
@@ -348,7 +357,7 @@ class Parser {
     parseFactor() {
         let expression = this.parseUnary();
 
-        while (this.match([Tokens.OPERATOR_MULTIPLY, Tokens.OPERATOR_DIVIDE])) {
+        while (this.match([Tokens.STAR, Tokens.SLASH])) {
             let operator = this.previous();
             let right = this.parseUnary();
 
@@ -364,7 +373,7 @@ class Parser {
     }
 
     parseUnary() {
-        if (this.match([Tokens.OPERATOR_NEGATE, Tokens.OPERATOR_NOT])) {
+        if (this.match([Tokens.MINUS, Tokens.BANG])) {
             let operator = this.previous();
             let expression = this.parseUnary();
 
@@ -379,7 +388,10 @@ class Parser {
     }
 
     parsePrimary() {
-        if (this.match(Tokens.INTEGER_LITERAL)) return this.previous();
+        if (this.match(Tokens.INTEGER_LITERAL)) return {
+            type: Nodes.INTEGER_LITERAL,
+            value: this.previous().value
+        };
 
         if (this.match(Tokens.LEFT_PAREN)) {
             let expression = this.parseExpression();

@@ -3,6 +3,6 @@ int64 num() {
 }
 
 int64 main() {
-    int64 test = num() + 5;
+    int64 test = (5 * 4) / 2;
     return test;
 }

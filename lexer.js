@@ -128,33 +128,33 @@ class Lexer {
             else if (this.peek() == "+") {
                 this.advance();
                 this.addToken({
-                    type: Tokens.OPERATOR_ADD
+                    type: Tokens.PLUS
                 });
             } else if (this.peek() == "-") {
                 this.advance();
                 this.addToken({
-                    type: Tokens.OPERATOR_SUBTRACT
+                    type: Tokens.MINUS
                 });
             } else if (this.peek() == "*") {
                 this.advance();
                 this.addToken({
-                    type: Tokens.OPERATOR_MULTIPLY
+                    type: Tokens.STAR
                 });
             } else if (this.peek() == "/") {
                 this.advance();
                 this.addToken({
-                    type: Tokens.OPERATOR_DIVIDE
+                    type: Tokens.SLASH
                 });
             } else if (this.peek() == "!") {
                 this.advance();
                 if (this.peekNext() == "=") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.OPERATOR_NOT_EQUALITY
+                        type: Tokens.BANG_EQUAL
                     });
                 } else {
                     this.addToken({
-                        type: Tokens.OPERATOR_NEGATE
+                        type: Tokens.BANG
                     });
                 }
             } else if (this.peek() == "=") {
@@ -162,12 +162,12 @@ class Lexer {
                 if (this.peekNext() == "=") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.OPERATOR_EQUALITY
+                        type: Tokens.EQUAL_EQUAL
                     });
 
                 } else {
                     this.addToken({
-                        type: Tokens.OPERATOR_ASSIGN
+                        type: Tokens.EQUAL
                     });
                 }
             } else if (this.peek() == ">") {
@@ -175,11 +175,11 @@ class Lexer {
                 if (this.peekNext() == "=") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.OPERATOR_GREATER_THAN_OR_EQUAL
+                        type: Tokens.GREATER_EQUAL
                     });
                 } else {
                     this.addToken({
-                        type: Tokens.OPERATOR_GREATER_THAN
+                        type: Tokens.GREATER
                     });
                 }
             } else if (this.peek() == "<") {
@@ -187,12 +187,12 @@ class Lexer {
                 if (this.peekNext() == "<") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.OPERATOR_LESS_THAN_OR_EQUAL
+                        type: Tokens.LESS_EQUAL
                     });
 
                 } else {
                     this.addToken({
-                        type: Tokens.OPERATOR_LESS_THAN
+                        type: Tokens.LESS
                     });
                 }
             } else if (this.peek() == "|") {
@@ -200,12 +200,12 @@ class Lexer {
                 if (this.peekNext() == "|") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.OPERATOR_LOGICAL_OR
+                        type: Tokens.PIPE_PIPE
                     });
 
                 } else {
                     this.addToken({
-                        type: Tokens.OPERATOR_BINARY_OR
+                        type: Tokens.PIPE
                     });
                 }
             } else if (this.peek() == "&") {
@@ -213,12 +213,12 @@ class Lexer {
                 if (this.peekNext() == "&") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.OPERATOR_LOGICAL_AND
+                        type: Tokens.AND_AND
                     });
 
                 } else {
                     this.addToken({
-                        type: Tokens.OPERATOR_BINARY_AND
+                        type: Tokens.AND
                     });
                 }
             } else if (this.peek() == ",") {

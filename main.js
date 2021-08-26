@@ -12,6 +12,8 @@ lexer.run();
 let parser = new Parser(data, lexer.tokens);
 parser.run();
 
+//console.log(parser.ast[1].block)
+
 let code_generator = new CodeGenerator(parser.ast);
 code_generator.run();
 
