@@ -1,5 +1,5 @@
-const Tokens = require("../tokens");
-const Nodes = require("../nodes");
+const Tokens = require("../lexer/tokens");
+const Nodes = require("../parser/nodes");
 const Types = require("./types");
 
 const {GlobalScope, FunctionScope, VariableScope, DataTypeScope} = require("./scope");
