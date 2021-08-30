@@ -1,4 +1,4 @@
-const Tokens = require("./tokens");
+const Tokens = require("../lexer/tokens");
 const Nodes = require("./nodes");
 
 /*
