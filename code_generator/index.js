@@ -126,9 +126,12 @@ class CodeGenerator {
 
                 this.freeRegister(rightRegister);
                 return leftRegister;
-            }/* else if (expression.operator == Tokens.STAR) {
-                return this.performRAXInstruction(leftRegister, rightRegister, "mul");
-            } else if (expression.operator == Tokens.SLASH) {
+            } else if (expression.operator == Tokens.STAR) {
+                this.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
+
+                this.freeRegister(rightRegister);
+                return leftRegister;
+            }/* else if (expression.operator == Tokens.SLASH) {
                 return this.performRAXInstruction(leftRegister, rightRegister, "div");
             }*/
 
