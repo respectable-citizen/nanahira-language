@@ -17,12 +17,22 @@ class CodeGenerator {
         this.instructions = []; //Buffer for storing instructions.
 
         this.registers = {
-            "rax": 1,
-            "rbx": 1,
-            "rcx": 1,
-            "rdx": 1,
-            "rsi": 1,
-            "rdi": 1
+            //"rax": true,  Reserved for div instruction
+            "rbx": true,
+            "rcx": true,
+            //"rdx": true,  Reserved for div instruction
+            //"rbp": true,  Reserved for stack
+            //"rsp": true,  Reserved for stack
+            "rsi": true,
+            "rdi": true,
+            "r8":  true,
+            "r9":  true,
+            "r10":  true,
+            "r11":  true,
+            "r12":  true,
+            "r13":  true,
+            "r14":  true,
+            "r15":  true,
         };
 
         this.currentFunc; //Stores the current function that is being parsed.
