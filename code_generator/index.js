@@ -169,6 +169,11 @@ class CodeGenerator {
             let variable = this.getVariable(expression.value.value);
 
             if (variable.loc.type == "register") return variable.loc.loc;
+        } else if (expression.type == Nodes.UNARY_EXPRESSION) {
+            let expressionRegister = this.generateExpression(expression.expression);
+
+            this.addInstruction(`neg ${expressionRegister}`);
+            return expressionRegister;
         }
         
         throw "Unknown expression type.";
