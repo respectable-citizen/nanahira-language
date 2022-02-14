@@ -1,8 +1,4 @@
-int64 num() {
-    return 4 * 5;
-}
 
 int64 main() {
-    int64 test = -5;
-    test = 4;
+    int64 test = 2 + 5 * 4;
 }
