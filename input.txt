@@ -1,4 +1,5 @@
 
 int64 main() {
     int64 test = 2 + 5 * 4;
+    int64 test2 = test / 2;
 }

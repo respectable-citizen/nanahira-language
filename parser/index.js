@@ -406,7 +406,7 @@ class Parser {
             } else {
                 //Variable
                 return {
-                    type: Tokens.IDENTIFIER,
+                    type: Nodes.VARIABLE,
                     value: this.get()
                 };
             }

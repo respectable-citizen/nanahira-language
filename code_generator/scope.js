@@ -51,8 +51,8 @@ class FunctionScope {
         this.variables = variables;
     }
 
-    addVariable(identifier, returnType) {
-        this.variables[identifier] = new VariableScope(returnType);
+    addVariable(identifier, loc, dataType) {
+        this.variables[identifier] = new VariableScope(loc, dataType);
     }
 
     getVariable(identifier) {
@@ -61,7 +61,8 @@ class FunctionScope {
 }
 
 class VariableScope {
-    constructor(dataType) {
+    constructor(loc, dataType) {
+        this.loc = loc;
         this.dataType = dataType;
     }
 }

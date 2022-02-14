@@ -100,9 +100,11 @@ class CodeGenerator {
         let dataType = statement.dataType.value;
         if (!this.scope.getDataType(dataType)) throw `Data type ${dataType} does not exist.`;
 
-        this.getCurrentFunction().addVariable(identifier, dataType);
-
-        return this.generateExpression(statement.expression);
+        let register = this.generateExpression(statement.expression);
+        this.getCurrentFunction().addVariable(identifier, {
+            type: "register",
+            loc: register
+        }, dataType);
     }
 
     generateExpression(expression) {
@@ -146,7 +148,7 @@ class CodeGenerator {
                     this.freeRegister(leftRegister);
                 }
                 
-                //Ensure RDX Is 0 is it forms the high-half of the dividend
+                //Ensure RDX is 0 as it forms the high-half of the dividend
                 this.addInstruction(`mov rdx, 0`);
 
                 this.addInstruction(`div ${rightRegister}`);
@@ -156,6 +158,12 @@ class CodeGenerator {
             }
 
             throw "Unknown operator.";
+        } else if (expression.type == Nodes.VARIABLE) {
+            let variable = this.getCurrentFunction().getVariable(expression.value.value);
+            if (!variable) throw `No such variable ${expression.value.value}`;
+            if (variable.loc.type != "register") throw "Unknown variable location type";
+
+            return variable.loc.loc;
         }
         
         throw "Unknown expression type.";
