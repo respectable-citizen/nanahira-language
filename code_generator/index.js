@@ -139,9 +139,21 @@ class CodeGenerator {
 
                 this.freeRegister(rightRegister);
                 return leftRegister;
-            }/* else if (expression.operator == Tokens.SLASH) {
-                return this.performRAXInstruction(leftRegister, rightRegister, "div");
-            }*/
+            } else if (expression.operator == Tokens.SLASH) {
+                //Ensure dividend is in RAX
+                if (leftRegister != "rax") {
+                    this.addInstruction(`mov rax, ${leftRegister}`);
+                    this.freeRegister(leftRegister);
+                }
+                
+                //Ensure RDX Is 0 is it forms the high-half of the dividend
+                this.addInstruction(`mov rdx, 0`);
+
+                this.addInstruction(`div ${rightRegister}`);
+                this.freeRegister(rightRegister);
+
+                return "rax";
+            }
 
             throw "Unknown operator.";
         }
