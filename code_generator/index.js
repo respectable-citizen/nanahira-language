@@ -63,7 +63,7 @@ class CodeGenerator {
     allocateRegister() {
         for (let register in this.registers) {
             if (this.registers[register]) {
-                this.registers[register] = 0;
+                this.registers[register] = false;
                 return register;
             }
         }
@@ -72,10 +72,8 @@ class CodeGenerator {
     }
 
     freeRegister(register) {
-        this.registers[register] = 1;
+        this.registers[register] = true;
     }
-
-    performRAXInstruction(leftRegister, rightRegister, mnemonic) {}
 
     getFunction(identifier) {
         return this.functions.filter(node => node.identifier.value == identifier)[0];
