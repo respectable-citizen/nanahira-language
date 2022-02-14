@@ -78,6 +78,13 @@ class CodeGenerator {
     getFunction(identifier) {
         return this.functions.filter(node => node.identifier.value == identifier)[0];
     }
+    
+    getVariable(identifier) {
+        let variable = this.getCurrentFunction().getVariable(identifier);
+        if (variable) return variable;
+        
+        throw `No such variable ${expression.value.value}`;
+    }
 
     generateFunction(identifier) {
         let func = this.getFunction(identifier);
@@ -159,14 +166,20 @@ class CodeGenerator {
 
             throw "Unknown operator.";
         } else if (expression.type == Nodes.VARIABLE) {
-            let variable = this.getCurrentFunction().getVariable(expression.value.value);
-            if (!variable) throw `No such variable ${expression.value.value}`;
-            if (variable.loc.type != "register") throw "Unknown variable location type";
+            let variable = this.getVariable(expression.value.value);
 
-            return variable.loc.loc;
+            if (variable.loc.type == "register") return variable.loc.loc;
         }
         
         throw "Unknown expression type.";
+    }
+
+    generateAssignmentExpression(statement) {
+        let variable = this.getVariable(statement.identifier.value);
+        if (variable.loc.type == "register") {
+            let expressionValueRegister = this.generateExpression(statement.expression);
+            this.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
+        }
     }
 
     generateReturnStatement(statement) {
@@ -179,6 +192,8 @@ class CodeGenerator {
                 console.log(this.generateVariableDeclaration(statement));
             } else if (statement.type == Nodes.RETURN_STATEMENT) {
                 this.generateReturnStatement(statement);
+            } else if (statement.type == Nodes.ASSIGNMENT_EXPRESSION) {
+                this.generateAssignmentExpression(statement);
             }
         }
 
