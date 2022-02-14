@@ -60,7 +60,7 @@ class Parser {
         let line = this.code.substring(startLine, endLine);
 
         console.log(`ERROR on line ${this.peek().line}!`);
-        console.log(line );
+        console.log(line);
         console.log(this.generateArrowAtPosition(this.peek().start - startLine));
         console.log("");
         console.log(`Error: ${message}`);
@@ -256,7 +256,9 @@ class Parser {
         let identifier = this.get();
         
         let expression;
-        if (this.match(Tokens.EQUAL)) {
+        let operator;
+        if (this.match([Tokens.EQUAL, Tokens.PLUS_EQUAL, Tokens.MINUS_EQUAL, Tokens.STAR_EQUAL, Tokens.SLASH_EQUAL])) {
+            operator = this.previous();
             expression = this.parseExpression();
         }
         this.expect(Tokens.END_OF_LINE);
@@ -264,6 +266,7 @@ class Parser {
         return {
             type: Nodes.ASSIGNMENT_EXPRESSION,
             identifier,
+            operator,
             expression
         };
     }

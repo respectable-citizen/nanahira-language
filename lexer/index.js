@@ -1,7 +1,6 @@
 const Tokens = require("./tokens");
 
 class Lexer {
-    
     constructor(code) {
         this.code = code;
         this.tokens = [];
@@ -14,6 +13,7 @@ class Lexer {
         token.line = this.line;
         token.start = this.start;
         token.end = this.pos;
+        
         this.tokens.push(token);
     }
 
@@ -127,27 +127,59 @@ class Lexer {
             //Operators handled here: +, -, *, /, !, =, == , !=, >, <, >=, <=, |, ||, &, &&
             else if (this.peek() == "+") {
                 this.advance();
-                this.addToken({
-                    type: Tokens.PLUS
-                });
+                if (this.peek() == "=") {
+                    this.advance();
+                    this.addToken({
+                        type: Tokens.PLUS_EQUAL
+                    });
+
+                } else {
+                    this.addToken({
+                        type: Tokens.PLUS
+                    });
+                }
             } else if (this.peek() == "-") {
                 this.advance();
-                this.addToken({
-                    type: Tokens.MINUS
-                });
+                if (this.peek() == "=") {
+                    this.advance();
+                    this.addToken({
+                        type: Tokens.MINUS_EQUAL
+                    });
+
+                } else {
+                    this.addToken({
+                        type: Tokens.MINUS
+                    });
+                }
             } else if (this.peek() == "*") {
                 this.advance();
-                this.addToken({
-                    type: Tokens.STAR
-                });
+                if (this.peek() == "=") {
+                    this.advance();
+                    this.addToken({
+                        type: Tokens.STAR_EQUAL
+                    });
+
+                } else {
+                    this.addToken({
+                        type: Tokens.STAR
+                    });
+                }
             } else if (this.peek() == "/") {
                 this.advance();
-                this.addToken({
-                    type: Tokens.SLASH
-                });
+                if (this.peek() == "=") {
+                    this.advance();
+                    this.addToken({
+                        type: Tokens.SLASH_EQUAL
+                    });
+
+                } else {
+                    this.addToken({
+                        type: Tokens.SLASH
+                    });
+                }
             } else if (this.peek() == "!") {
                 this.advance();
-                if (this.peekNext() == "=") {
+                if (this.peek() == "=") {
                     this.advance();
                     this.addToken({
                         type: Tokens.BANG_EQUAL
@@ -159,7 +191,7 @@ class Lexer {
                 }
             } else if (this.peek() == "=") {
                 this.advance();
-                if (this.peekNext() == "=") {
+                if (this.peek() == "=") {
                     this.advance();
                     this.addToken({
                         type: Tokens.EQUAL_EQUAL
@@ -172,7 +204,7 @@ class Lexer {
                 }
             } else if (this.peek() == ">") {
                 this.advance();
-                if (this.peekNext() == "=") {
+                if (this.peek() == "=") {
                     this.advance();
                     this.addToken({
                         type: Tokens.GREATER_EQUAL
@@ -184,7 +216,7 @@ class Lexer {
                 }
             } else if (this.peek() == "<") {
                 this.advance();
-                if (this.peekNext() == "<") {
+                if (this.peek() == "=") {
                     this.advance();
                     this.addToken({
                         type: Tokens.LESS_EQUAL
@@ -197,7 +229,7 @@ class Lexer {
                 }
             } else if (this.peek() == "|") {
                 this.advance();
-                if (this.peekNext() == "|") {
+                if (this.peek() == "|") {
                     this.advance();
                     this.addToken({
                         type: Tokens.PIPE_PIPE
@@ -210,7 +242,7 @@ class Lexer {
                 }
             } else if (this.peek() == "&") {
                 this.advance();
-                if (this.peekNext() == "&") {
+                if (this.peek() == "&") {
                     this.advance();
                     this.addToken({
                         type: Tokens.AND_AND

@@ -177,8 +177,28 @@ class CodeGenerator {
     generateAssignmentExpression(statement) {
         let variable = this.getVariable(statement.identifier.value);
         if (variable.loc.type == "register") {
-            let expressionValueRegister = this.generateExpression(statement.expression);
-            this.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
+            let expressionValueRegister 
+
+            if (statement.operator.type == Tokens.EQUAL) {
+                expressionValueRegister = this.generateExpression(statement.expression);
+            } else {
+                let expression = {
+                    type: Nodes.BINARY_EXPRESSION,
+                    operator: statement.operator.type.split("_EQUAL").join(""),
+                    left: {
+                        type: Nodes.VARIABLE,
+                        value: {
+                            value: statement.identifier.value
+                        }
+                    },
+                    right: statement.expression                    
+                };
+
+                expressionValueRegister = this.generateExpression(expression);
+            }
+            
+            if (variable.loc.loc != expressionValueRegister) this.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
+
         }
     }
 
@@ -189,7 +209,7 @@ class CodeGenerator {
     generateBlock(block) {
         for (let statement of block) {
             if (statement.type == Nodes.VARIABLE_DECLARATION) {
-                console.log(this.generateVariableDeclaration(statement));
+                this.generateVariableDeclaration(statement);
             } else if (statement.type == Nodes.RETURN_STATEMENT) {
                 this.generateReturnStatement(statement);
             } else if (statement.type == Nodes.ASSIGNMENT_EXPRESSION) {

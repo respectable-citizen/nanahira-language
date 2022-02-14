@@ -16,8 +16,6 @@ parser.run();
 let optimizer = new Optimizer(parser.ast);
 optimizer.run();
 
-console.log(optimizer.ast[0].block)
-
 let code_generator = new CodeGenerator(parser.ast);
 code_generator.run();
 
