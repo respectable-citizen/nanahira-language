@@ -104,8 +104,17 @@ class CodeGenerator {
             
             return register;
         } else if (expression.type == Nodes.BINARY_EXPRESSION) {
-            let leftRegister = this.generateExpression(expression.left);
-            let rightRegister = this.generateExpression(expression.right);
+            let leftRegister;
+            let rightRegister;
+
+            //Evaluate binary expressions first, as to not waste registers by loading in unused values
+            if (expression.left.type == Nodes.BINARY_EXPRESSION) {
+                leftRegister = this.generateExpression(expression.left);
+                rightRegister = this.generateExpression(expression.right);
+            } else {
+                rightRegister = this.generateExpression(expression.right);
+                leftRegister = this.generateExpression(expression.left);
+            }
 
             if (expression.operator == Tokens.PLUS) {
                 this.addInstruction(`add ${leftRegister}, ${rightRegister}`);
