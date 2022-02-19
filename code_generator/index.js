@@ -86,6 +86,24 @@ class CodeGenerator {
         throw `No such variable ${expression.value.value}`;
     }
 
+    sizeRegisterToDataType(register, dataType) {
+        //Clear correct number of bits depending on data type
+        let newWidth;
+        if (dataType == "uint32" || dataType == "int32") {
+            newWidth = 32;
+        } else if (dataType == "uint16" || dataType == "int16") {
+            newWidth = 16;
+        } else if (dataType == "uint8" || dataType == "int8") {
+            newWidth = 8;
+        }
+
+        //Check if we actually need to clear any bits
+        if (newWidth) {
+            let bitMask = (2 ** newWidth) - 1;
+            this.addInstruction(`and ${register}, ${bitMask}`);
+        }
+    }
+
     generateFunction(identifier) {
         let func = this.getFunction(identifier);
         this.currentFunc = identifier; //Set the current function being parsed
@@ -107,11 +125,17 @@ class CodeGenerator {
         let dataType = statement.dataType.value;
         if (!this.scope.getDataType(dataType)) throw `Data type ${dataType} does not exist.`;
 
+        //Generate code to evaluate expression
         let register = this.generateExpression(statement.expression);
+
+        //Remember where the variable is stored
         this.getCurrentFunction().addVariable(identifier, {
             type: "register",
             loc: register
         }, dataType);
+
+        //Ensure register isn't storing a value unfit for the data type 
+        this.sizeRegisterToDataType(register, dataType); 
     }
 
     generateExpression(expression) {
@@ -182,7 +206,7 @@ class CodeGenerator {
     generateAssignmentExpression(statement) {
         let variable = this.getVariable(statement.identifier.value);
         if (variable.loc.type == "register") {
-            let expressionValueRegister 
+            let expressionValueRegister;
 
             if (statement.operator.type == Tokens.EQUAL) {
                 expressionValueRegister = this.generateExpression(statement.expression);
@@ -203,7 +227,8 @@ class CodeGenerator {
             }
             
             if (variable.loc.loc != expressionValueRegister) this.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
-
+        
+            this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
         }
     }
 
