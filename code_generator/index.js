@@ -79,21 +79,28 @@ class CodeGenerator {
         return this.functions.filter(node => node.identifier.value == identifier)[0];
     }
 
+	convertRegisterNameToSize(register, bits) {
+		if (bits == 32) return register.replace("r", "e");
+		if (bits == 16) return register.replace("r", "");
+		if (bits == 8) return register.replace("r", "").replace("x", "l");
+
+		throw `Invalid bit count ${bits}`;
+	}
+
     sizeRegisterToDataType(register, dataType) {
         //Clear correct number of bits depending on data type
-        let newWidth;
+        let registerName;
         if (dataType == "uint32" || dataType == "int32") {
-            newWidth = 32;
+            registerName = this.convertRegisterNameToSize(register, 32);
         } else if (dataType == "uint16" || dataType == "int16") {
-            newWidth = 16;
+            registerName = this.convertRegisterNameToSize(register, 16);
         } else if (dataType == "uint8" || dataType == "int8") {
-            newWidth = 8;
+            registerName = this.convertRegisterNameToSize(register, 8);
         }
 
         //Check if we actually need to clear any bits
-        if (newWidth) {
-            let bitMask = (2 ** newWidth) - 1;
-            this.addInstruction(`and ${register}, ${bitMask}`);
+        if (registerName) {
+            this.addInstruction(`mov ${registerName}, ${registerName}`);
         }
     }
 
