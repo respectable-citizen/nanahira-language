@@ -308,7 +308,7 @@ class CodeGenerator {
 		for (let argument of statement.args) {
 			if (argument.type == Nodes.VARIABLE) {
 				let variable = this.getCurrentFunction().getVariable(argument.value.value);
-				if (!variable) throw Error.Generator(`Cannot use variable "${argument.value.value} as an argument because it does not exist"`);
+				if (!variable) throw new Error.Generator(`Cannot use variable "${argument.value.value}" as an argument because it does not exist`, argument.value.start);
 
 				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
 			
