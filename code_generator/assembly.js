@@ -1,5 +1,5 @@
 
-//This class is called label, but it contains information for both the label and the instructions marked by the label.
+//This class contains information for both the label and the instructions marked by the label.
 class Label {
     constructor(name, instructions = []) {
         this.name = name;

@@ -1,4 +1,4 @@
-//Scopes be scopes, or members of scopes. For example, a variable is not a scope itself but it is contained within a scope and therefore has a class "VariableScope".
+//Scopes can be scopes, or members of scopes. For example, a variable is not a scope itself but it is contained within a scope and therefore has a class "VariableScope".
 class GlobalScope {
     constructor(members = {}) {
         this.members = members;
