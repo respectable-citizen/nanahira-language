@@ -265,13 +265,22 @@ class CodeGenerator {
 
     generateReturnStatement(statement) {
     	let register = this.generateExpression(statement.expression);
-    	this.addInstruction(`mov rax, ${register}`); //rax is the designated return register
-		this.freeRegister(register);
+
+		if (this.currentFunc == "main") {
+			//Since this is the main function, the return value should be used as an exit code
+			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
+			this.addInstruction(`mov rax, 60`);
+			this.addInstruction(`mov rdi, ${register}`);
+			this.addInstruction(`syscall`);
+		} else {
+    		this.addInstruction(`mov rax, ${register}`); //rax is the designated return register
+			this.freeRegister(register);
 		
-		this.addInstruction(`pop rbp`); //Restore old base pointer
+			this.addInstruction(`pop rbp`); //Restore old base pointer
 		
-		let argumentBytes = 16 * this.getFunction(this.currentFunc).parameters.length;
-		this.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
+			let argumentBytes = 16 * this.getFunction(this.currentFunc).parameters.length;
+			this.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
+		}
 	}
 
 	generateCallExpression(statement) {
