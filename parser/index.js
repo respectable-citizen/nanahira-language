@@ -150,6 +150,16 @@ class Parser {
         return Nodes.VARIABLE_DECLARATION;
     }
 
+	determineExpressionStatementType() {
+		if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
+	
+		let token = this.peekNext();
+		if (token.type == Tokens.LEFT_PAREN) return Nodes.CALL_EXPRESSION;
+		if (token.type == Tokens.EQUAL) return Nodes.ASSIGNMENT_EXPRESSION;
+	
+		return Nodes.NONE;
+	}
+
     parseDeclaration() {
         let declarationType = this.determineDeclarationType();
 
@@ -194,8 +204,13 @@ class Parser {
     }
 
     parseExpressionStatement() {
-        return this.parseAssignmentExpression();
-    }
+		let expressionStatementType = this.determineExpressionStatementType();
+
+		if (expressionStatementType == Nodes.CALL_EXPRESSION) return this.parseCallExpression();
+		if (expressionStatementType == Nodes.ASSIGNMENT_EXPRESSION) return this.parseAssignmentExpression();
+    	
+		this.unexpectedToken();
+	}
 
     parseReturnStatement() {
         this.expect(Tokens.KEYWORD_RETURN);
@@ -280,7 +295,8 @@ class Parser {
         if (this.peek().type != Tokens.RIGHT_PAREN) args = this.parseArguments();
         
         this.expect(Tokens.RIGHT_PAREN);
-        
+       	this.expect(Tokens.END_OF_LINE);
+
         return {
             type: Nodes.CALL_EXPRESSION,
             identifier,
