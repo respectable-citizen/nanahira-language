@@ -1,4 +1,12 @@
 
+uint64 neg(uint64 value) {
+	value = -value;
+	return value;
+}
+
 int64 main() {
-    uint64 test = -5;
+    uint64 test = 5;
+	test = neg(neg(test));
+
+	return test;
 }
