@@ -108,6 +108,13 @@ class CodeGenerator {
         let func = this.getFunction(identifier);
         this.currentFunc = identifier; //Set the current function being parsed
 
+		//Check if function should be returning something
+		if (func.returnType.value != "void") {
+			//TODO: More comprehensive return checking, this does not check for return statements in loops, conditionals, etc
+			let returnStatements = func.block.filter(statement => statement.type == Nodes.RETURN_STATEMENT);
+			if (returnStatements.length == 0) throw `Function "${identifier}" does not return any value but has non-void return type "${func.returnType.value}"`;
+		}
+
         this.scope.addFunction(identifier, func.returnType.value); //Create a scope entry
 
 		this.addInstruction(`push rbp`); //Save old base pointer to the stack
