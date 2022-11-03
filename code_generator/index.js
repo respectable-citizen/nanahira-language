@@ -109,6 +109,19 @@ class CodeGenerator {
         this.currentFunc = identifier; //Set the current function being parsed
 
         this.scope.addFunction(identifier, func.returnType.value); //Create a scope entry
+
+		//Add parameters to the scope
+		for (let parameter of func.parameters.slice().reverse()) { //Iterate through parameters in reverse because we have to pop off the stack in the reverse of the order we pushed the data onto it
+			let register = this.allocateRegister();
+
+			this.addInstruction(`pop ${register}`);
+		
+			this.getCurrentFunction().addVariable(parameter.identifier.value, {
+				type: "register",
+				loc: register
+			}, parameter.dataType.value);
+		}
+
         let instructions = this.generateBlock(func.block);
         this.scope.cleanFunction(identifier);                      //We are done parsing the function, clean it up
 
@@ -269,7 +282,7 @@ class CodeGenerator {
         if (!this.getFunction("main")) throw "Missing main function.";
 
         for (let func of this.functions) {
-			if (func.identifier.value == "main") this.generateFunction(func.identifier.value);
+			this.generateFunction(func.identifier.value);
 		}
 		
 		this.output = this.assembly.output();
