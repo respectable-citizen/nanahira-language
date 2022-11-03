@@ -5,8 +5,6 @@ maybe you're thinking "a compiler, written in javascript? really? are you stupid
 
 it currently supports basic computation, functions, and outputting a number in the form of an exit code (returned from main function)
 
-might rename it at some point to someone/something, havent decided yet
-
-imagine having a whole programming language and compiler dedicated to you
-
+might rename it at some point to someone/something, havent decided yet  
+imagine having a whole programming language and compiler dedicated to you  
 that's like, the highest honor
