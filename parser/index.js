@@ -1,5 +1,6 @@
 const Tokens = require("../lexer/tokens");
 const Nodes = require("./nodes");
+const Error = require("../error");
 
 /*
 Parser grammar:
@@ -45,34 +46,26 @@ class Parser {
         this.pos = 0;
     }
 
+	parserError(message) {
+		let lineTokens = this.getLineTokens(this.peek().line);
+		let startLine = lineTokens[0].start;
+		let endLine = lineTokens[lineTokens.length - 1].end;
+		let line = this.code.substring(startLine, endLine);
+
+		Error.reportError(this.peek().line, line, message, this.peek().start - startLine);
+		throw "TODO: Implement synchronization for errors (this will allow the compiler to keep parsing even after an error)";
+	}
+
+	unexpectedToken(expectedTokenType = null) {
+		if (expectedTokenType) {
+			this.parserError(`Expected ${expectedTokenType} but got ${this.peek().type}`);
+		} else {
+			this.parserError(`Unexpected token ${this.peek().type}`);
+		}
+	}
+
     getLineTokens(line) {
         return this.tokens.filter(token => token.line == line);
-    }
-
-    generateArrowAtPosition(position) {
-        return " ".repeat(position) + "^";
-    }
-
-    error(message) {
-        let lineTokens = this.getLineTokens(this.peek().line);
-        let startLine = lineTokens[0].start;
-        let endLine = lineTokens[lineTokens.length - 1].end;
-        let line = this.code.substring(startLine, endLine);
-
-        console.log(`ERROR on line ${this.peek().line}!`);
-        console.log(line);
-        console.log(this.generateArrowAtPosition(this.peek().start - startLine));
-        console.log("");
-        console.log(`Error: ${message}`);
-        throw "TODO: Implement synchronization for errors (this will allow the compiler to keep parsing even after an error)";
-    }
-
-    unexpectedToken(expectedTokenType = null) {
-        if (expectedTokenType) {
-            this.error(`Expected ${expectedTokenType} but got ${this.peek().type}`);
-        } else {
-            this.error(`Unexpected token ${this.peek().type}`);
-        }
     }
 
     atEnd() {
@@ -192,6 +185,8 @@ class Parser {
         let assignment = this.parseAssignmentExpression();
         assignment.type = Nodes.VARIABLE_DECLARATION;
         assignment.dataType = dataType;
+		assignment.start = dataType.start;
+		assignment.end = this.peek().end;
         
 		this.expect(Tokens.END_OF_LINE);
         
@@ -201,8 +196,8 @@ class Parser {
     parseStatement() {
         if (this.peek().type == Tokens.KEYWORD_RETURN) return this.parseReturnStatement();
         if (this.peek().type == Tokens.IDENTIFIER) return this.parseExpressionStatement();
-		console.log(this.peek().type);
-        this.unexpectedToken();
+        
+		this.unexpectedToken();
     }
 
     parseExpressionStatement() {
@@ -217,18 +212,23 @@ class Parser {
 
 		return {
 			type: Nodes.EXPRESSION_STATEMENT,
-			expression
+			expression,
+			end: this.previous().end
 		};
 	}
 
     parseReturnStatement() {
-        this.expect(Tokens.KEYWORD_RETURN);
+		let start = this.peek().start;
+        
+		this.expect(Tokens.KEYWORD_RETURN);
         let expression = this.parseExpression();
         this.expect(Tokens.END_OF_LINE);
 
         return {
             type: Nodes.RETURN_STATEMENT,
-            expression
+            expression,
+			start,
+			end: this.previous().end
         };
     }
 

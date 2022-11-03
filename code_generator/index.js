@@ -1,13 +1,13 @@
 const Tokens = require("../lexer/tokens");
 const Nodes = require("../parser/nodes");
 const Types = require("./types");
+const Error = require("../error");
 
 const {GlobalScope, FunctionScope, VariableScope, DataTypeScope} = require("./scope");
 
 const {Label, Section, Assembly} = require("./assembly");
 
 //TODO: Fully implement data types
-//TODO: Make error messages not crap: they need to provide an indication of where the error is occurring
 class CodeGenerator {
     constructor(ast) {
         this.assembly = new Assembly();
@@ -78,13 +78,6 @@ class CodeGenerator {
     getFunction(identifier) {
         return this.functions.filter(node => node.identifier.value == identifier)[0];
     }
-    
-    getVariable(identifier) {
-        let variable = this.getCurrentFunction().getVariable(identifier);
-        if (variable) return variable;
-        
-        throw `No such variable "${identifier}"`;
-    }
 
     sizeRegisterToDataType(register, dataType) {
         //Clear correct number of bits depending on data type
@@ -149,7 +142,7 @@ class CodeGenerator {
         let identifier = statement.identifier.value;
 
         if (this.getCurrentFunction().getVariable(identifier)) {
-            throw "Variable has already been declared.";
+			Error.error(`Variable "${identifier}" has already been declared`, statement);
         }
 
         let dataType = statement.dataType.value;
@@ -220,7 +213,8 @@ class CodeGenerator {
 
             throw "Unknown operator.";
         } else if (expression.type == Nodes.VARIABLE) {
-            let variable = this.getVariable(expression.value.value);
+            let variable = this.getCurrentFunction().getVariable(expression.value.value);
+			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
 
             if (variable.loc.type == "register") return variable.loc.loc;
         } else if (expression.type == Nodes.UNARY_EXPRESSION) {
@@ -239,7 +233,11 @@ class CodeGenerator {
     }
 
     generateAssignmentExpression(statement) {
-        let variable = this.getVariable(statement.identifier.value);
+        let variable = this.getCurrentFunction().getVariable(statement.identifier.value);
+		if (!variable) {
+			throw new Error.Generator(`Cannot assign to variable "${statement.identifier.value}" because it does not exist`, statement.identifier.start);
+		}
+
         if (variable.loc.type == "register") {
             let expressionValueRegister;
 
@@ -299,7 +297,9 @@ class CodeGenerator {
 
 		for (let argument of statement.args) {
 			if (argument.type == Nodes.VARIABLE) {
-				let variable = this.getVariable(argument.value.value);
+				let variable = this.getCurrentFunction().getVariable(argument.value.value);
+				if (!variable) throw Error.Generator(`Cannot use variable "${argument.value.value} as an argument because it does not exist"`);
+
 				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
 			
 				this.addInstruction(`push ${variable.loc.loc}`);
@@ -319,20 +319,28 @@ class CodeGenerator {
 
     generateBlock(block) {
         for (let statement of block) {
-            if (statement.type == Nodes.VARIABLE_DECLARATION) {
-                this.generateVariableDeclaration(statement);
-            } else if (statement.type == Nodes.RETURN_STATEMENT) {
-                this.generateReturnStatement(statement);
-            } else if (statement.type == Nodes.EXPRESSION_STATEMENT) {
-				if (statement.expression.type == Nodes.ASSIGNMENT_EXPRESSION) {
-                	this.generateAssignmentExpression(statement.expression);
-            	} else if (statement.expression.type == Nodes.CALL_EXPRESSION) {
-					this.generateCallExpression(statement.expression);
+			try {
+            	if (statement.type == Nodes.VARIABLE_DECLARATION) {
+                	this.generateVariableDeclaration(statement);
+            	} else if (statement.type == Nodes.RETURN_STATEMENT) {
+                	this.generateReturnStatement(statement);
+            	} else if (statement.type == Nodes.EXPRESSION_STATEMENT) {
+					if (statement.expression.type == Nodes.ASSIGNMENT_EXPRESSION) {
+                		this.generateAssignmentExpression(statement.expression);
+            		} else if (statement.expression.type == Nodes.CALL_EXPRESSION) {
+						this.generateCallExpression(statement.expression);
+					} else {
+						throw `Cannot generate expression statement with type ${statement.expression.type}`;
+					}
 				} else {
-					throw `Cannot generate expression statement with type ${statement.expression.type}`;
+					throw `Cannot generate statement of type ${statement.type}`;
 				}
-			} else {
-				throw `Cannot generate statement of type ${statement.type}`;
+			} catch (e) {
+				if (e.name == "CodeGeneratorError") {
+					Error.error(e.message, statement, e.arrow);
+				} else {
+					throw e;
+				}
 			}
         }
 
