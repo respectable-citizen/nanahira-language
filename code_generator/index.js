@@ -215,7 +215,7 @@ class CodeGenerator {
 			let func = this.getFunction(expression.identifier.value);
 			if (func.returnType.value == "void") throw `Cannot use return value of function in expression as it returns void`;
 
-			return "rax"; //Return data from function is always in rax
+			return this.generateCallExpression(expression); //Return data from function is always in rax
 		}
 
         throw "Unknown expression type.";
@@ -254,6 +254,8 @@ class CodeGenerator {
     	let register = this.generateExpression(statement.expression);
     	this.addInstruction(`mov rax, ${register}`); //rax is the designated return register
 		this.freeRegister(register);
+		
+		this.addInstruction("ret");
 	}
 
 	generateCallExpression(statement) {
@@ -265,6 +267,8 @@ class CodeGenerator {
 		}
 
 		this.addInstruction(`call ${statement.identifier.value}`);
+
+		return "rax"; //rax is the designated return register
 	}
 
     generateBlock(block) {

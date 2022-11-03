@@ -36,7 +36,7 @@ class Assembly {
     }
 
     output() {
-        return `global _main
+        return `global main
 
 ${this.text.output()}
 
