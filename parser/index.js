@@ -419,6 +419,11 @@ class Parser {
             value: this.previous().value
         };
 
+		if (this.match(Tokens.STRING_LITERAL)) return {
+            type: Nodes.STRING_LITERAL,
+            value: this.previous().value
+        };
+
         if (this.match(Tokens.LEFT_PAREN)) {
             let expression = this.parseExpression();
             this.expect(Tokens.RIGHT_PAREN);

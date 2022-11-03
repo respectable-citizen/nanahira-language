@@ -122,7 +122,20 @@ class Lexer {
                 this.addToken({
                     type: Tokens.RIGHT_CURLY_BRACE
                 });
-            }
+            } else if (this.peek() == '"') {
+				this.advance();
+
+				let value = "";
+				while (this.peek() != '"') value += this.get();
+
+				this.advance();
+
+				this.addToken({
+					type: Tokens.STRING_LITERAL,
+					value
+				});
+			}
+
             //Start of operator handling
             //Operators handled here: +, -, *, /, !, =, == , !=, >, <, >=, <=, |, ||, &, &&
             else if (this.peek() == "+") {
