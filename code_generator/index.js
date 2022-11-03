@@ -83,7 +83,7 @@ class CodeGenerator {
         let variable = this.getCurrentFunction().getVariable(identifier);
         if (variable) return variable;
         
-        throw `No such variable ${expression.value.value}`;
+        throw `No such variable "${identifier}"`;
     }
 
     sizeRegisterToDataType(register, dataType) {
@@ -236,6 +236,17 @@ class CodeGenerator {
         //console.log(statement)
     }
 
+	generateCallExpression(statement) {
+		for (let argument of statement.args) {
+			let variable = this.getVariable(argument.value.value);
+			if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
+			
+			this.addInstruction(`push ${variable.loc.loc}`);
+		}
+
+		this.addInstruction(`call ${statement.identifier.value}`);
+	}
+
     generateBlock(block) {
         for (let statement of block) {
             if (statement.type == Nodes.VARIABLE_DECLARATION) {
@@ -244,7 +255,11 @@ class CodeGenerator {
                 this.generateReturnStatement(statement);
             } else if (statement.type == Nodes.ASSIGNMENT_EXPRESSION) {
                 this.generateAssignmentExpression(statement);
-            }
+            } else if (statement.type == Nodes.CALL_EXPRESSION) {
+				this.generateCallExpression(statement);
+			} else {
+				throw `Cannot generate statement of type ${statement.type}`;
+			}
         }
 
         return this.getInstructions();
@@ -253,8 +268,11 @@ class CodeGenerator {
     run() {
         if (!this.getFunction("main")) throw "Missing main function.";
 
-        this.generateFunction("main");
-        this.output = this.assembly.output();
+        for (let func of this.functions) {
+			if (func.identifier.value == "main") this.generateFunction(func.identifier.value);
+		}
+		
+		this.output = this.assembly.output();
     }
 }
 
