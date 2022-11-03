@@ -17,7 +17,7 @@ class CodeGenerator {
         this.instructions = []; //Buffer for storing instructions.
 
         this.registers = {
-            //"rax": true,  Reserved for div instruction
+            //"rax": true,  Reserved for div instruction and returning up to 64 bits from functions
             "rbx": true,
             "rcx": true,
             //"rdx": true,  Reserved for div instruction
@@ -211,8 +211,13 @@ class CodeGenerator {
 
             this.addInstruction(`neg ${expressionRegister}`);
             return expressionRegister;
-        }
-        
+        } else if (expression.type == Nodes.CALL_EXPRESSION) {
+			let func = this.getFunction(expression.identifier.value);
+			if (func.returnType.value == "void") throw `Cannot use return value of function in expression as it returns void`;
+
+			return "rax"; //Return data from function is always in rax
+		}
+
         throw "Unknown expression type.";
     }
 
@@ -266,10 +271,14 @@ class CodeGenerator {
                 this.generateVariableDeclaration(statement);
             } else if (statement.type == Nodes.RETURN_STATEMENT) {
                 this.generateReturnStatement(statement);
-            } else if (statement.type == Nodes.ASSIGNMENT_EXPRESSION) {
-                this.generateAssignmentExpression(statement);
-            } else if (statement.type == Nodes.CALL_EXPRESSION) {
-				this.generateCallExpression(statement);
+            } else if (statement.type == Nodes.EXPRESSION_STATEMENT) {
+				if (statement.expression.type == Nodes.ASSIGNMENT_EXPRESSION) {
+                	this.generateAssignmentExpression(statement.expression);
+            	} else if (statement.expression.type == Nodes.CALL_EXPRESSION) {
+					this.generateCallExpression(statement.expression);
+				} else {
+					throw `Cannot generate expression statement with type ${statement.expression.type}`;
+				}
 			} else {
 				throw `Cannot generate statement of type ${statement.type}`;
 			}

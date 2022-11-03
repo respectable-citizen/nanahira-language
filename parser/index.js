@@ -193,23 +193,32 @@ class Parser {
         assignment.type = Nodes.VARIABLE_DECLARATION;
         assignment.dataType = dataType;
         
-        return assignment;
+		this.expect(Tokens.END_OF_LINE);
+        
+		return assignment;
     }
 
     parseStatement() {
         if (this.peek().type == Tokens.KEYWORD_RETURN) return this.parseReturnStatement();
         if (this.peek().type == Tokens.IDENTIFIER) return this.parseExpressionStatement();
-
+		console.log(this.peek().type);
         this.unexpectedToken();
     }
 
     parseExpressionStatement() {
 		let expressionStatementType = this.determineExpressionStatementType();
+		let expression;
 
-		if (expressionStatementType == Nodes.CALL_EXPRESSION) return this.parseCallExpression();
-		if (expressionStatementType == Nodes.ASSIGNMENT_EXPRESSION) return this.parseAssignmentExpression();
+		if (expressionStatementType == Nodes.CALL_EXPRESSION) expression = this.parseCallExpression();
+		if (expressionStatementType == Nodes.ASSIGNMENT_EXPRESSION) expression = this.parseAssignmentExpression();
+		if (!expression) this.unexpectedToken();
     	
-		this.unexpectedToken();
+		this.expect(Tokens.END_OF_LINE);
+
+		return {
+			type: Nodes.EXPRESSION_STATEMENT,
+			expression
+		};
 	}
 
     parseReturnStatement() {
@@ -276,7 +285,6 @@ class Parser {
             operator = this.previous();
             expression = this.parseExpression();
         }
-        this.expect(Tokens.END_OF_LINE);
 
         return {
             type: Nodes.ASSIGNMENT_EXPRESSION,
@@ -295,7 +303,6 @@ class Parser {
         if (this.peek().type != Tokens.RIGHT_PAREN) args = this.parseArguments();
         
         this.expect(Tokens.RIGHT_PAREN);
-       	this.expect(Tokens.END_OF_LINE);
 
         return {
             type: Nodes.CALL_EXPRESSION,
