@@ -3,14 +3,8 @@ maybe you're thinking "a compiler, written in javascript? really? are you stupid
 * once it's all compiled runtime is the same, and i plan on making compilation zoomzoom fast
 * i also plan on rewriting the compiler in this language once its ready
 
-so what does it support? at the moment, jack all (that would be useful to you), but heres the list anyway:
-* lexing
-* parsing
-  * variable assignments
-  * function declarations (with parameters)
-  * expressions
-  * function calls (with arguments)
-  * return statements
-  * all these things are pretty inconsequential especially considering it doesn't actually generate code yet, but listing off a lot of things sounds impressive so get off my back
-* code generation
-  * literally it just generates a barebones assembly file with no code
+it currently supports basic computation, functions, and outputting a number in the form of an exit code (returned from main function)
+
+might rename it at some point to someone/something, havent decided yet
+imagine having a whole programming language and compiler dedicated to you
+that's like, the highest honor
