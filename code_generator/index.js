@@ -269,10 +269,18 @@ class CodeGenerator {
 
 	generateCallExpression(statement) {
 		for (let argument of statement.args) {
-			let variable = this.getVariable(argument.value.value);
-			if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
+			if (argument.type == Nodes.VARIABLE) {
+				let variable = this.getVariable(argument.value.value);
+				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
 			
-			this.addInstruction(`push ${variable.loc.loc}`);
+				this.addInstruction(`push ${variable.loc.loc}`);
+			} else if (argument.type == Nodes.CALL_EXPRESSION) {
+				let register = this.generateCallExpression(argument);
+
+				this.addInstruction(`push ${register}`);
+			} else {
+				throw `Cannot use ${argument.type} as function argument`;
+			}
 		}
 
 		this.addInstruction(`call ${statement.identifier.value}`);
