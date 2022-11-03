@@ -251,8 +251,10 @@ class CodeGenerator {
     }
 
     generateReturnStatement(statement) {
-        //console.log(statement)
-    }
+    	let register = this.generateExpression(statement.expression);
+    	this.addInstruction(`mov rax, ${register}`); //rax is the designated return register
+		this.freeRegister(register);
+	}
 
 	generateCallExpression(statement) {
 		for (let argument of statement.args) {
