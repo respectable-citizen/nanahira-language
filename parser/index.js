@@ -169,6 +169,8 @@ class Parser {
         let parameters = [];
         if (this.peek().type != Tokens.RIGHT_PAREN) parameters = this.parseParameters();
         this.expect(Tokens.RIGHT_PAREN);
+		
+		let end = this.peek().end;
         let block = this.parseBlock();
 
         return {
@@ -176,7 +178,10 @@ class Parser {
             returnType,
             identifier,
             parameters,
-            block
+            block,
+			start: returnType.start,
+			end,
+			line: returnType.line
         };
     }
 
@@ -187,6 +192,7 @@ class Parser {
         assignment.dataType = dataType;
 		assignment.start = dataType.start;
 		assignment.end = this.peek().end;
+		assignment.line = this.peek().line;
         
 		this.expect(Tokens.END_OF_LINE);
         
@@ -201,6 +207,8 @@ class Parser {
     }
 
     parseExpressionStatement() {
+		let startToken = this.peek();
+
 		let expressionStatementType = this.determineExpressionStatementType();
 		let expression;
 
@@ -213,7 +221,9 @@ class Parser {
 		return {
 			type: Nodes.EXPRESSION_STATEMENT,
 			expression,
-			end: this.previous().end
+			start: startToken.start,
+			end: this.previous().end,
+			line: startToken.line
 		};
 	}
 
@@ -228,7 +238,8 @@ class Parser {
             type: Nodes.RETURN_STATEMENT,
             expression,
 			start,
-			end: this.previous().end
+			end: this.previous().end,
+			line: this.previous().line
         };
     }
 
@@ -416,12 +427,12 @@ class Parser {
     parsePrimary() {
         if (this.match(Tokens.INTEGER_LITERAL)) return {
             type: Nodes.INTEGER_LITERAL,
-            value: this.previous().value
+            value: this.previous()
         };
 
 		if (this.match(Tokens.STRING_LITERAL)) return {
             type: Nodes.STRING_LITERAL,
-            value: this.previous().value
+            value: this.previous()
         };
 
         if (this.match(Tokens.LEFT_PAREN)) {

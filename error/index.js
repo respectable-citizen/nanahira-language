@@ -41,10 +41,10 @@ function getPositionFromNode(node, position = {}) {
 }
 
 function error(message, node, arrow = null) {
-	let position = getPositionFromNode(node);
+	//let position = getPositionFromNode(node);
 	
-	let line = source.substring(position.start, position.end);
-	reportError(position.line, line, message, arrow ? arrow - position.start : null);
+	let line = source.substring(node.start, node.end);
+	reportError(node.line, line, message, arrow ? arrow - node.start : null);
 
 	generationErrorOccurred = true;
 }

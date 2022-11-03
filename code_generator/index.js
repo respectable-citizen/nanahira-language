@@ -98,18 +98,16 @@ class CodeGenerator {
     }
 
     generateFunction(identifier) {
-		if (identifier == "asm") {
-			throw `Function name "asm" is reserveed`;
-		}
-
         let func = this.getFunction(identifier);
-        this.currentFunc = identifier; //Set the current function being parsed
+        this.currentFunc = identifier; //Set the current function being generated
+		
+		if (identifier == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
 
 		//Check if function should be returning something
 		if (func.returnType.value != "void") {
 			//TODO: More comprehensive return checking, this does not check for return statements in loops, conditionals, etc
 			let returnStatements = func.block.filter(statement => statement.type == Nodes.RETURN_STATEMENT);
-			if (returnStatements.length == 0) throw `Function "${identifier}" does not return any value but has non-void return type "${func.returnType.value}"`;
+			if (returnStatements.length == 0) throw new Error.Generator(`Function "${identifier}" does not return any value but has non-void return type "${func.returnType.value}"`, func.returnType.start);
 		}
 
         this.scope.addFunction(identifier, func.returnType.value); //Create a scope entry
@@ -146,7 +144,7 @@ class CodeGenerator {
         }
 
         let dataType = statement.dataType.value;
-        if (!this.scope.getDataType(dataType)) throw `Data type ${dataType} does not exist.`;
+        if (!this.scope.getDataType(dataType)) throw new Error.Generator(`Data type "${dataType}" does not exist.`, statement.dataType.start);
 
         //Generate code to evaluate expression
         let register = this.generateExpression(statement.expression);
@@ -164,7 +162,7 @@ class CodeGenerator {
     generateExpression(expression) {
         if (expression.type == Nodes.INTEGER_LITERAL) {
             let register = this.allocateRegister();
-            this.addInstruction(`mov ${register}, ${expression.value}`);
+            this.addInstruction(`mov ${register}, ${expression.value.value}`);
             
             return register;
         } else if (expression.type == Nodes.BINARY_EXPRESSION) {
@@ -211,25 +209,30 @@ class CodeGenerator {
                 return "rax";
             }
 
-            throw "Unknown operator.";
+			throw `Cannot currently handle operator "${expression.operator}"`;
         } else if (expression.type == Nodes.VARIABLE) {
             let variable = this.getCurrentFunction().getVariable(expression.value.value);
 			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
 
             if (variable.loc.type == "register") return variable.loc.loc;
         } else if (expression.type == Nodes.UNARY_EXPRESSION) {
-            let expressionRegister = this.generateExpression(expression.expression);
+            if (expression.operator == Tokens.MINUS) {
+				let expressionRegister = this.generateExpression(expression.expression);
 
-            this.addInstruction(`neg ${expressionRegister}`);
-            return expressionRegister;
+            	this.addInstruction(`neg ${expressionRegister}`);
+            	
+				return expressionRegister;
+			}
+
+			throw `Cannot currently handle operator "${expression.operator}"`;
         } else if (expression.type == Nodes.CALL_EXPRESSION) {
 			let func = this.getFunction(expression.identifier.value);
-			if (func.returnType.value == "void") throw `Cannot use return value of function in expression as it returns void`;
+			if (func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
 		}
 
-        throw "Unknown expression type.";
+        throw `Cannot currently handle expression "${expression.type}".`;
     }
 
     generateAssignmentExpression(statement) {
@@ -286,10 +289,10 @@ class CodeGenerator {
 	}
 
 	generateASMCall(statement) {
-		if (statement.args.length != 1) throw "asm() takes 1 argument";
-		if (statement.args[0].type != Nodes.STRING_LITERAL) throw "asm() argument must be a string";
+		if (statement.args.length != 1) throw new Error.Generator("asm() takes 1 argument", statement.identifier.end);
+		if (statement.args[0].type != Nodes.STRING_LITERAL) throw new Error.Generator("asm() argument must be a string", statement.args[0].value.start);
 		
-		this.addInstruction(statement.args[0].value);
+		this.addInstruction(statement.args[0].value.value);
 	}
 
 	generateCallExpression(statement) {
@@ -305,6 +308,10 @@ class CodeGenerator {
 				this.addInstruction(`push ${variable.loc.loc}`);
 			} else if (argument.type == Nodes.CALL_EXPRESSION) {
 				let register = this.generateCallExpression(argument);
+
+				this.addInstruction(`push ${register}`);
+			} else if (argument.type == Nodes.INTEGER_LITERAL) {
+				let register = this.generateExpression(argument);
 
 				this.addInstruction(`push ${register}`);
 			} else {
@@ -351,7 +358,15 @@ class CodeGenerator {
         if (!this.getFunction("main")) throw "Missing main function.";
 
         for (let func of this.functions) {
-			this.generateFunction(func.identifier.value);
+			try {
+				this.generateFunction(func.identifier.value);
+			} catch(e) {
+				if (e.name == "CodeGeneratorError") {
+					Error.error(e.message, func, e.arrow);
+				} else {
+					throw e;
+				}
+			}
 		}
 		
 		this.output = this.assembly.output();
