@@ -105,6 +105,10 @@ class CodeGenerator {
     }
 
     generateFunction(identifier) {
+		if (identifier == "asm") {
+			throw `Function name "asm" is reserveed`;
+		}
+
         let func = this.getFunction(identifier);
         this.currentFunc = identifier; //Set the current function being parsed
 
@@ -283,7 +287,16 @@ class CodeGenerator {
 		}
 	}
 
+	generateASMCall(statement) {
+		if (statement.args.length != 1) throw "asm() takes 1 argument";
+		if (statement.args[0].type != Nodes.STRING_LITERAL) throw "asm() argument must be a string";
+		
+		this.addInstruction(statement.args[0].value);
+	}
+
 	generateCallExpression(statement) {
+		if (statement.identifier.value == "asm") return this.generateASMCall(statement);
+
 		for (let argument of statement.args) {
 			if (argument.type == Nodes.VARIABLE) {
 				let variable = this.getVariable(argument.value.value);
