@@ -110,11 +110,17 @@ class CodeGenerator {
 
         this.scope.addFunction(identifier, func.returnType.value); //Create a scope entry
 
-		//Add parameters to the scope
-		for (let parameter of func.parameters.slice().reverse()) { //Iterate through parameters in reverse because we have to pop off the stack in the reverse of the order we pushed the data onto it
+		this.addInstruction(`push rbp`); //Save old base pointer to the stack
+		this.addInstruction(`mov rbp, rsp`); //Use current stack pointer as new base pointer
+
+		//Handle parameters
+		for (let parameterIndex = func.parameters.length - 1; parameterIndex >= 0; parameterIndex--) { //Iterate through parameters in reverse because we have to pop off the stack in the reverse of the order we pushed the data onto it
+			let parameter = func.parameters[parameterIndex];
+
 			let register = this.allocateRegister();
 
-			this.addInstruction(`pop ${register}`);
+			let baseOffset = 16 + (16 * parameterIndex); //Plus 16 to skip old base pointer and return address
+			this.addInstruction(`mov ${register}, [rbp + ${baseOffset}]`); //Move argument from stack into register
 		
 			this.getCurrentFunction().addVariable(parameter.identifier.value, {
 				type: "register",
@@ -255,7 +261,10 @@ class CodeGenerator {
     	this.addInstruction(`mov rax, ${register}`); //rax is the designated return register
 		this.freeRegister(register);
 		
-		this.addInstruction("ret");
+		this.addInstruction(`pop rbp`); //Restore old base pointer
+		
+		let argumentBytes = 16 * this.getFunction(this.currentFunc).parameters.length;
+		this.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
 	}
 
 	generateCallExpression(statement) {
