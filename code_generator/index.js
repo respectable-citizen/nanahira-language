@@ -135,6 +135,7 @@ class CodeGenerator {
         this.currentFunc = identifier; //Set the current function being generated
 		
 		if (identifier == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
+		if (identifier == "syscall") throw new Error.Generator(`Function name "syscall" is reserved`, func.identifier.start);
 
 		//Check if function should be returning something
 		if (func.returnType.value != "void") {
@@ -391,8 +392,20 @@ class CodeGenerator {
 		this.addInstruction(statement.args[0].value.value);
 	}
 
+	generateSyscall(statement) {
+		if (statement.args.length != 4) throw new Error.Generator("syscall() takes 4 argument", statement.identifier.end);
+		if (statement.args[0].type != Nodes.INTEGER_LITERAL) throw new Error.Generator("syscall number must be an integer", statement.args[0].value.start);
+		
+		this.addInstruction(`mov rax, ${statement.args[0].value.value}`);
+		this.addInstruction(`mov rdi, ${statement.args[1].value.value}`);
+		this.addInstruction(`mov rsi, ${statement.args[2].value.value}`);
+		this.addInstruction(`mov rdx, ${statement.args[3].value.value}`);
+		this.addInstruction(`syscall`);
+	}
+
 	generateCallExpression(statement) {
 		if (statement.identifier.value == "asm") return this.generateASMCall(statement);
+		if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
 		for (let argument of statement.args) {
 			if (argument.type == Nodes.VARIABLE) {
