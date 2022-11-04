@@ -45,7 +45,7 @@ class Assembly {
 	}
 
 	startFunction(identifier) {
-		this.currentFunction = identifier;
+		this.currentFunctionIdentifier = identifier;
         
 		this.scope.addFunction({
 			name: identifier
@@ -58,9 +58,9 @@ class Assembly {
 	}
 	
 	finishFunction() {
-        this.scope.cleanFunction(this.currentFunction);
+        this.scope.cleanFunction(this.currentFunctionIdentifier);
 
-        this.text.labels.push(new Label(this.currentFunction, this.instructions));
+        this.text.labels.push(new Label(this.currentFunctionIdentifier, this.instructions));
 		this.instructions = [];
 	}
 
