@@ -455,10 +455,10 @@ class Parser {
         };
 
 		if (this.match(Tokens.LEFT_CURLY_BRACE)) {
-			let numbers = [];
+			let values = [];
 			while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) {
 				let number = this.expect(Tokens.INTEGER_LITERAL);
-				numbers.push(number);
+				values.push(number);
 
 				if (this.peek().type != Tokens.RIGHT_CURLY_BRACE) this.expect(Tokens.COMMA);
 			}
@@ -466,7 +466,7 @@ class Parser {
 
 			return {
 				type: Nodes.ARRAY,
-				numbers
+				values
 			};
 		}
 

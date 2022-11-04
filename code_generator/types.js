@@ -1,12 +1,43 @@
 //Contains built-in data types
 
-module.exports = {
-    "int8": "int8",
-    "int16": "int16",
-    "int32": "int32",
-    "int64": "int64",
-    "uint8": "uint8",
-    "uint16": "uint16",
-    "uint32": "uint32",
-    "uint64": "uint64"
-};
+module.exports = [
+    {
+		name: "int8",
+		size: 8
+	},
+	
+	{
+		name: "uint8",
+		size: 8
+	},
+	
+	{
+		name: "int16",
+		size: 16
+	},
+	
+	{
+		name: "uint16",
+		size: 16
+	},
+	
+	{
+		name: "int32",
+		size: 32
+	},
+	
+	{
+		name: "uint32",
+		size: 32
+	},
+	
+	{
+		name: "int64",
+		size: 64
+	},
+	
+	{
+		name: "uint64",
+		size: 64
+	},
+];

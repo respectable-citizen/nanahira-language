@@ -1,79 +1,98 @@
-//Scopes can be scopes, or members of scopes. For example, a variable is not a scope itself but it is contained within a scope and therefore has a class "VariableScope".
-class GlobalScope {
-    constructor(members = {}) {
-        this.members = members;
-    }
 
-    addScopeItem(identifier, scopeItem) {
-        this.members[identifier] = scopeItem;
-    }
+class Scope {
+	constructor() {
+		this.members = {};
+	
+		this.currentScopePath = [];
+	}
 
-    getScopeItem(identifier) {
-        return this.members[identifier];
-    }
+	getLocalScope() {
+		return this.getScopeItem(this.currentScopePath);
+	}
+	
+	getScopeItem(path) {
+		let item = this.members;
+		for (let pathItem of path) item = item[pathItem];
 
-    getScopeItemWithType(identifier, type) {
-        let scopeItem = this.getScopeItem(identifier);
-        if (!scopeItem) return;
-        if (!(scopeItem instanceof type)) return;
+		return item;
+	}
 
-        return scopeItem;
-    }
+	addScopeItem(path, name, value) {
+		this.getScopeItem(path)[name] = value;
+	}
 
-    addFunction(identifier, returnType, variables = {}) {
-        let func = new FunctionScope(returnType, variables);
-        this.addScopeItem(identifier, func);
-    }
-    
-    addDataType(identifier) {
-        let dataType = new DataTypeScope();
-        this.addScopeItem(identifier, dataType);
-    }
+	addLocalScopeItem(name, value) {
+		this.getLocalScope()[name] = value;
+	}
 
-    getFunction(identifier) {
-        return this.getScopeItemWithType(identifier, FunctionScope);
-    }
+	getLocalScopeItem(name) {
+		let localScope = this.getLocalScope();
+		
+		if (localScope[name]) return localScope[name];
+		return null;
+	}
 
-    getDataType(identifier) {
-        return this.getScopeItemWithType(identifier, DataTypeScope);
-    }
+	descendScope(name) {
+		if (!this.getLocalScopeItem(name)) throw `Attempt to descend into scope "${name}" from path "${this.currentScopePath.join(",")}" but it does not exist`;
+		this.currentScopePath.push(name);
+	}
 
-    //Cleans up a function to save some memory
-    cleanFunction(identifier) {
-        let func = this.getFunction(identifier);
-        func.variables = []; //We don't need the variables anymore as they were only used for semantic analysis within the scope
-    }
+	ascendScope() {
+		this.currentScopePath.pop();
+	}
+
+	getDataType(name) {
+		let item = this.getScopeItem([])[name];
+		if (item && item.type == "dataType") return item;
+	}
+
+	getFunction(name) {
+		let item = this.getScopeItem([])[name];
+		if (item && item.type == "function") return item;
+	}
+
+	getVariable(name) {
+		let item = this.members;
+		for (let pathItem of this.currentScopePath) {
+			if (item["variables"]) break;
+			item = item[pathItem];
+		}
+		
+		return item["variables"][name];
+	}
+
+	//Gets added to global scope
+	addDataType(dataType) {
+		this.addScopeItem([], dataType.name, {
+			type: "dataType",
+			...dataType
+		});
+	}
+
+	//Gets added to global scope
+	addFunction(func) {
+		this.addScopeItem([], func.name, {
+			type: "function",
+			variables: [],
+			...func
+		});
+	}
+
+	//Gets added to local scope
+	addVariable(variable) {
+		let variables = this.getLocalScopeItem("variables");
+		
+		variables[variable.name] = {
+			type: "variable",
+			...variable
+		};
+	}
+
+	//Cleans function in global scope
+	cleanFunction(name) {
+		let func = this.getFunction(name);
+		func["variables"] = {};
+	}
 }
 
-class FunctionScope {
-    constructor(returnType, variables = {}) {
-        this.returnType = returnType;
-        this.variables = variables;
-    }
-
-    addVariable(identifier, loc, dataType) {
-        this.variables[identifier] = new VariableScope(loc, dataType);
-    }
-
-    getVariable(identifier) {
-        return this.variables[identifier];
-    }
-}
-
-class VariableScope {
-    constructor(loc, dataType) {
-        this.loc = loc;
-        this.dataType = dataType;
-    }
-}
-
-class DataTypeScope {
-    constructor() {}
-}
-
-module.exports = {
-    GlobalScope,
-    FunctionScope,
-    VariableScope,
-    DataTypeScope
-};
+module.exports = Scope;

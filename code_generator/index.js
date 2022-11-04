@@ -3,177 +3,75 @@ const Nodes = require("../parser/nodes");
 const Types = require("./types");
 const Error = require("../error");
 
-const {GlobalScope, FunctionScope, VariableScope, DataTypeScope} = require("./scope");
+const Scope = require("./scope");
 
-const {Label, Section, Assembly} = require("./assembly");
+const Assembly = require("./assembly").Assembly;
+const Memory = require("./memory");
 
 //TODO: Fully implement data types
 class CodeGenerator {
     constructor(ast) {
-        this.assembly = new Assembly();
+        this.scope = new Scope();
+        this.assembly = new Assembly(this.scope);
+		this.memory = new Memory(this.assembly);
+
         this.ast = ast;
         this.functions = this.ast.filter(node => node.type == Nodes.FUNCTION_DECLARATION);
 
-        this.instructions = []; //Buffer for storing instructions.
-
-        this.registers = {
-            //"rax": true,  Reserved for div instruction and returning up to 64 bits from functions
-            "rbx": true,
-            "rcx": true,
-            //"rdx": true,  Reserved for div instruction
-            //"rbp": true,  Reserved for stack
-            //"rsp": true,  Reserved for stack
-            "rsi": true,
-            "rdi": true,
-            "r8":  true,
-            "r9":  true,
-            "r10":  true,
-            "r11":  true,
-            "r12":  true,
-            "r13":  true,
-            "r14":  true,
-            "r15":  true,
-        };
-
-        this.currentFunc;               //Stores the function that is currently being parsed.
-		this.currentStatement;          //Stores the statement that is currently being parsed.
-        this.scope = new GlobalScope(); //Stores scope information for semantic analysis and such
+		this.currentStatement;          //Stores the statement that is currently being generated.
+		this.currentFunction;           //Stores the function that is currently being generated.
 
         //Add primitive data types
-        for (let type in Types) {
-            this.scope.addDataType(type);
+        for (let dataType of Types) {
+            this.scope.addDataType(dataType);
         }
     }
 
-	//Returns size in bits of a given data type
-	getSizeFromDataType(dataType) {
-		if (dataType == "uint8" || dataType == "int8") return 8;
-		if (dataType == "uint16" || dataType == "int16") return 16;
-		if (dataType == "uint32" || dataType == "int32") return 32;
-		if (dataType == "uint64" || dataType == "int64") return 64;
-
-		throw `Cannot determine size of data type "${dataType}"`;
+	getFunctionNode(identifier) {
+		return this.functions.filter(node => node.identifier.value == identifier)[0];
 	}
 
-	//Generates corresponding assembly code that represents the location of that data (registers/memory/stack)
-	retrieveFromLocation(loc) {
-		if (loc.type == "register") return loc.loc;
-		else if (loc.type == "memory") {
-			let variable = this.getCurrentFunction().getVariable(loc.loc);
-			let bytesPerElement = this.getSizeFromDataType(variable.dataType) / 8;
-			
-			let memoryOffset = "";
-			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
-			return `[${loc.loc}${memoryOffset}]`;
-		}
+    generateFunction(func) {
+		this.currentFunction = func;
+		this.assembly.startFunction(func.identifier.value);
 
-		throw `Cannot handle location type ${loc.type}`;
-	}
-
-    //Returns the scope of the current function being parsed
-    getCurrentFunction() {
-        return this.scope.getFunction(this.currentFunc);
-    }
-
-    addInstruction(instruction) {
-        this.instructions.push(instruction);
-    }
-
-    getInstructions() {
-        let instructions = this.instructions;
-        this.instructions = [];
-
-        return instructions;
-    }
-
-    allocateRegister() {
-        for (let register in this.registers) {
-            if (this.registers[register]) {
-                this.registers[register] = false;
-                return register;
-            }
-        }
-
-        throw "Ran out of registers to allocate.";
-    }
-
-    freeRegister(register) {
-        this.registers[register] = true;
-    }
-
-    getFunction(identifier) {
-        return this.functions.filter(node => node.identifier.value == identifier)[0];
-    }
-
-	convertRegisterNameToSize(register, bits) {
-		if (bits == 32) return register.replace("r", "e");
-		if (bits == 16) return register.replace("r", "");
-		if (bits == 8) return register.replace("r", "").replace("x", "l");
-
-		throw `Invalid bit count ${bits}`;
-	}
-
-    sizeRegisterToDataType(register, dataType) {
-        //Clear correct number of bits depending on data type
-        let registerName;
-        if (dataType == "uint32" || dataType == "int32") {
-            registerName = this.convertRegisterNameToSize(register, 32);
-        } else if (dataType == "uint16" || dataType == "int16") {
-            registerName = this.convertRegisterNameToSize(register, 16);
-        } else if (dataType == "uint8" || dataType == "int8") {
-            registerName = this.convertRegisterNameToSize(register, 8);
-        }
-
-        //Check if we actually need to clear any bits
-        if (registerName) {
-            this.addInstruction(`mov ${registerName}, ${registerName}`);
-        }
-    }
-
-    generateFunction(identifier) {
-        let func = this.getFunction(identifier);
-        this.currentFunc = identifier; //Set the current function being generated
-		
-		if (identifier == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
-		if (identifier == "syscall") throw new Error.Generator(`Function name "syscall" is reserved`, func.identifier.start);
+		if (func.identifier.value == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
+		if (func.identifier.value == "syscall") throw new Error.Generator(`Function name "syscall" is reserved`, func.identifier.start);
 
 		//Check if function should be returning something
-		if (func.returnType.value != "void") {
+		if (this.currentFunction.returnType.value != "void") {
 			//TODO: More comprehensive return checking, this does not check for return statements in loops, conditionals, etc
-			let returnStatements = func.block.filter(statement => statement.type == Nodes.RETURN_STATEMENT);
-			if (returnStatements.length == 0) throw new Error.Generator(`Function "${identifier}" does not return any value but has non-void return type "${func.returnType.value}"`, func.returnType.start);
+			let returnStatements = this.currentFunction.block.filter(statement => statement.type == Nodes.RETURN_STATEMENT);
+			if (returnStatements.length == 0) throw new Error.Generator(`Function "${func.identifier.value}" does not return any value but has non-void return type "${func.returnType.value}"`, this.currentFunction.returnType.start);
 		}
 
-        this.scope.addFunction(identifier, func.returnType.value); //Create a scope entry
-
-		this.addInstruction(`push rbp`); //Save old base pointer to the stack
-		this.addInstruction(`mov rbp, rsp`); //Use current stack pointer as new base pointer
+		this.assembly.addInstruction(`push rbp`); //Save old base pointer to the stack
+		this.assembly.addInstruction(`mov rbp, rsp`); //Use current stack pointer as new base pointer
 
 		//Handle parameters
-		for (let parameterIndex = func.parameters.length - 1; parameterIndex >= 0; parameterIndex--) { //Iterate through parameters in reverse because we have to pop off the stack in the reverse of the order we pushed the data onto it
-			let parameter = func.parameters[parameterIndex];
+		for (let parameterIndex = this.currentFunction.parameters.length - 1; parameterIndex >= 0; parameterIndex--) {
+			let parameter = this.currentFunction.parameters[parameterIndex];
 
-			let register = this.allocateRegister();
+			let register = this.memory.allocateRegister();
 
 			let baseOffset = 16 + (16 * parameterIndex); //Plus 16 to skip old base pointer and return address
-			this.addInstruction(`mov ${register}, [rbp + ${baseOffset}]`); //Move argument from stack into register
+			this.assembly.addInstruction(`mov ${register}, [rbp + ${baseOffset}]`); //Move argument from stack into register
 		
-			this.getCurrentFunction().addVariable(parameter.identifier.value, {
+			this.scope.addVariable(parameter.identifier.value, {
 				type: "register",
 				loc: register
 			}, parameter.dataType.value);
 		}
 
-        let instructions = this.generateBlock(func.block);
-        this.scope.cleanFunction(identifier);                      //We are done parsing the function, clean it up
-
-        this.assembly.text.labels.push(new Label(identifier, instructions));
+        this.generateBlock(this.currentFunction.block);
+	
+		this.assembly.finishFunction();
     }
 
     generateVariableDeclaration(statement) {
         let identifier = statement.identifier.value;
 
-        if (this.getCurrentFunction().getVariable(identifier)) {
+        if (this.scope.getVariable(identifier)) {
 			Error.error(`Variable "${identifier}" has already been declared`, statement);
         }
 
@@ -185,9 +83,12 @@ class CodeGenerator {
         	//Generate code to evaluate expression
         	let loc = this.generateExpression(statement.expression);
 		
-
         	//Add variable to function scope
-	        this.getCurrentFunction().addVariable(identifier, loc, dataType);
+	        this.scope.addVariable({
+				name: identifier,
+				loc,
+				dataType
+			});
 		} else {
 			if (statement.array) {
 				if (!statement.arraySize) throw new Error.Generator(`Cannot leave array uninitialized without providing array size.`, statement.bracketStart);
@@ -195,7 +96,7 @@ class CodeGenerator {
 				this.assembly.bss.labels.push(new Label(statement.identifier.value, `resb ${(this.getSizeFromDataType(dataType) / 8 * statement.arraySize.value)}`));
 
 				//Add variable to function scope
-	        	this.getCurrentFunction().addVariable(identifier, {
+	        	this.scope.addVariable(identifier, {
 					type: "memory",
 					loc: statement.identifier.value
 				}, dataType);
@@ -210,8 +111,8 @@ class CodeGenerator {
 
     generateExpression(expression) {
         if (expression.type == Nodes.INTEGER_LITERAL) {
-            let register = this.allocateRegister();
-            this.addInstruction(`mov ${register}, ${expression.value.value}`);
+            let register = this.memory.allocateRegister();
+            this.assembly.addInstruction(`mov ${register}, ${expression.value.value}`);
             
             return {
 				type: "register",
@@ -231,27 +132,27 @@ class CodeGenerator {
             }
 
             if (expression.operator == Tokens.PLUS) {
-                this.addInstruction(`add ${leftRegister}, ${rightRegister}`);
+                this.assembly.addInstruction(`add ${leftRegister}, ${rightRegister}`);
 
-                this.freeRegister(rightRegister);
+                this.memory.freeRegister(rightRegister);
             	
 				return {
 					type: "register",
 					loc: leftRegister
 				};
             } else if (expression.operator == Tokens.MINUS) {
-                this.addInstruction(`sub ${leftRegister}, ${rightRegister}`);
+                this.assembly.addInstruction(`sub ${leftRegister}, ${rightRegister}`);
 
-                this.freeRegister(rightRegister);
+                this.memory.freeRegister(rightRegister);
 	
 				return {
 					type: "register",
 					loc: leftRegister
 				};
             } else if (expression.operator == Tokens.STAR) {
-                this.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
+                this.assembly.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
 
-                this.freeRegister(rightRegister);
+                this.memory.freeRegister(rightRegister);
 
 				return {
 					type: "register",
@@ -260,15 +161,15 @@ class CodeGenerator {
             } else if (expression.operator == Tokens.SLASH) {
                 //Ensure dividend is in RAX
                 if (leftRegister != "rax") {
-                    this.addInstruction(`mov rax, ${leftRegister}`);
-                    this.freeRegister(leftRegister);
+                    this.assembly.addInstruction(`mov rax, ${leftRegister}`);
+                    this.memory.freeRegister(leftRegister);
                 }
                 
                 //Ensure RDX is 0 as it forms the high-half of the dividend
-                this.addInstruction(`mov rdx, 0`);
+                this.assembly.addInstruction(`mov rdx, 0`);
 
-                this.addInstruction(`div ${rightRegister}`);
-                this.freeRegister(rightRegister);
+                this.assembly.addInstruction(`div ${rightRegister}`);
+                this.memory.freeRegister(rightRegister);
 
                 return {
 					type: "register",
@@ -278,7 +179,7 @@ class CodeGenerator {
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
         } else if (expression.type == Nodes.VARIABLE) {
-            let variable = this.getCurrentFunction().getVariable(expression.value.value);
+            let variable = this.scope.getVariable(expression.value.value);
 			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
 			
 			let loc = structuredClone(variable.loc);
@@ -289,7 +190,7 @@ class CodeGenerator {
             if (expression.operator == Tokens.MINUS) {
 				let expressionRegister = this.generateExpression(expression.expression);
 
-            	this.addInstruction(`neg ${expressionRegister}`);
+            	this.assembly.addInstruction(`neg ${expressionRegister}`);
             	
 				return {
 					type: "register",
@@ -305,35 +206,24 @@ class CodeGenerator {
 			return this.generateCallExpression(expression); //Return data from function is always in rax
 		} else if (expression.type == Nodes.ARRAY) {
 			let arrayDataType = this.currentStatement.dataType.value;
+
+			//Determine name for label
 			let variableName;
 			if (this.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {
 				variableName = this.currentStatement.identifier.value;
 			} else {
 				throw `Cannot use array in statement of type ${this.currentStatement.type}`;
 			}
-
-			let assemblyDeclareSizeBits = this.getSizeFromDataType(arrayDataType);
-			let assemblyDeclareSize;
-			if (assemblyDeclareSizeBits == 8) assemblyDeclareSize = "db";
-			else if (assemblyDeclareSizeBits == 16) assemblyDeclareSize = "dw";
-			else if (assemblyDeclareSizeBits == 32) assemblyDeclareSize = "dd";
-			else if (assemblyDeclareSizeBits == 64) assemblyDeclareSize = "dq";
 			
-			if (!assemblyDeclareSize) throw `Unable to reserve size of ${assemblyDeclareSizeBits} bits`;
-
-			this.assembly.data.labels.push(new Label(variableName, `${assemblyDeclareSize} ${expression.numbers.map(x => x.value).join(", ")}`));
-			
-			return {
-				type: "memory",
-				loc: variableName
-			};
+			//Allocate array in the data section
+			return this.memory.allocateArray(variableName, arrayDataType, expression.values.map(x => x.value));
 		}
 
         throw `Cannot currently handle expression "${expression.type}".`;
     }
 
     generateAssignmentExpression(statement) {
-        let variable = this.getCurrentFunction().getVariable(statement.identifier.value);
+        let variable = this.scope.getVariable(statement.identifier.value);
 		if (!variable) {
 			throw new Error.Generator(`Cannot assign to variable "${statement.identifier.value}" because it does not exist`, statement.identifier.start);
 		}
@@ -359,29 +249,29 @@ class CodeGenerator {
                 expressionValueRegister = this.generateExpression(expression);
             }
             
-            if (variable.loc.loc != expressionValueRegister) this.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
+            if (variable.loc.loc != expressionValueRegister) this.assembly.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
         
             this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
         }
     }
 
     generateReturnStatement(statement) {
-    	let loc = this.retrieveFromLocation(this.generateExpression(statement.expression));
+    	let loc = this.memory.retrieveFromLocation(this.generateExpression(statement.expression));
 		
-		if (this.currentFunc == "main") {
+		if (this.assembly.currentFunction == "main") {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
-			this.addInstruction(`mov rax, 60`);
-			this.addInstruction(`mov rdi, ${loc}`);
-			this.addInstruction(`syscall`);
+			this.assembly.addInstruction(`mov rax, 60`);
+			this.assembly.addInstruction(`mov rdi, ${loc}`);
+			this.assembly.addInstruction(`syscall`);
 		} else {
-    		this.addInstruction(`mov rax, ${loc}`); //rax is the designated return register
-			this.freeRegister(register);
+    		this.assembly.addInstruction(`mov rax, ${loc}`); //rax is the designated return register
+			this.memory.freeRegister(loc);
 		
-			this.addInstruction(`pop rbp`); //Restore old base pointer
+			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer
 		
-			let argumentBytes = 16 * this.getFunction(this.currentFunc).parameters.length;
-			this.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
+			let argumentBytes = 16 * this.currentFunction.parameters.length;
+			this.assembly.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
 		}
 	}
 
@@ -389,18 +279,18 @@ class CodeGenerator {
 		if (statement.args.length != 1) throw new Error.Generator("asm() takes 1 argument", statement.identifier.end);
 		if (statement.args[0].type != Nodes.STRING_LITERAL) throw new Error.Generator("asm() argument must be a string", statement.args[0].value.start);
 		
-		this.addInstruction(statement.args[0].value.value);
+		this.assembly.addInstruction(statement.args[0].value.value);
 	}
 
 	generateSyscall(statement) {
-		if (statement.args.length != 4) throw new Error.Generator("syscall() takes 4 argument", statement.identifier.end);
+		if (statement.args.length != 4) throw new Error.Generator("syscall() takes 4 arguments", statement.identifier.end);
 		if (statement.args[0].type != Nodes.INTEGER_LITERAL) throw new Error.Generator("syscall number must be an integer", statement.args[0].value.start);
 		
-		this.addInstruction(`mov rax, ${statement.args[0].value.value}`);
-		this.addInstruction(`mov rdi, ${statement.args[1].value.value}`);
-		this.addInstruction(`mov rsi, ${statement.args[2].value.value}`);
-		this.addInstruction(`mov rdx, ${statement.args[3].value.value}`);
-		this.addInstruction(`syscall`);
+		this.assembly.addInstruction(`mov rax, ${statement.args[0].value.value}`);
+		this.assembly.addInstruction(`mov rdi, ${statement.args[1].value.value}`);
+		this.assembly.addInstruction(`mov rsi, ${statement.args[2].value.value}`);
+		this.assembly.addInstruction(`mov rdx, ${statement.args[3].value.value}`);
+		this.assembly.addInstruction(`syscall`);
 	}
 
 	generateCallExpression(statement) {
@@ -409,26 +299,26 @@ class CodeGenerator {
 
 		for (let argument of statement.args) {
 			if (argument.type == Nodes.VARIABLE) {
-				let variable = this.getCurrentFunction().getVariable(argument.value.value);
+				let variable = this.scope.getVariable(argument.value.value);
 				if (!variable) throw new Error.Generator(`Cannot use variable "${argument.value.value}" as an argument because it does not exist`, argument.value.start);
 
 				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
 			
-				this.addInstruction(`push ${variable.loc.loc}`);
+				this.assembly.addInstruction(`push ${variable.loc.loc}`);
 			} else if (argument.type == Nodes.CALL_EXPRESSION) {
 				let register = this.generateCallExpression(argument);
 
-				this.addInstruction(`push ${register}`);
+				this.assembly.addInstruction(`push ${register}`);
 			} else if (argument.type == Nodes.INTEGER_LITERAL) {
 				let register = this.generateExpression(argument);
 
-				this.addInstruction(`push ${register}`);
+				this.assembly.addInstruction(`push ${register}`);
 			} else {
 				throw `Cannot use ${argument.type} as function argument`;
 			}
 		}
 
-		this.addInstruction(`call ${statement.identifier.value}`);
+		this.assembly.addInstruction(`call ${statement.identifier.value}`);
 
 		return "rax"; //rax is the designated return register
 	}
@@ -461,16 +351,14 @@ class CodeGenerator {
 				}
 			}
         }
-
-        return this.getInstructions();
     }
 
     run() {
-        if (!this.getFunction("main")) throw "Missing main function.";
+        if (!this.getFunctionNode("main")) throw "Missing main function.";
 
         for (let func of this.functions) {
 			try {
-				this.generateFunction(func.identifier.value);
+				this.generateFunction(func);
 			} catch(e) {
 				if (e.name == "CodeGeneratorError") {
 					Error.error(e.message, func, e.arrow);

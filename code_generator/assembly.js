@@ -34,11 +34,39 @@ ${this.getAllLabelOutput()}`;
 }
 
 class Assembly {
-    constructor() {
+    constructor(scope) {
+		this.scope = scope;
+
         this.data = new Section("data");
         this.text = new Section("text");
         this.bss = new Section("bss");
-    }
+
+        this.instructions = []; //Buffer for storing instructions.
+	}
+
+	startFunction(identifier) {
+		this.currentFunction = identifier;
+        
+		this.scope.addFunction({
+			name: identifier
+		});
+		this.scope.descendScope(identifier);
+	}
+	
+	addInstruction(instruction) {
+		this.instructions.push(instruction);
+	}
+	
+	finishFunction() {
+        this.scope.cleanFunction(this.currentFunction);
+
+        this.text.labels.push(new Label(this.currentFunction, this.instructions));
+		this.instructions = [];
+	}
+
+	addDataEntry(name, size, value) {
+		this.data.labels.push(new Label(name, `${size} ${value}`));
+	}
 
     output() {
         return `global main
