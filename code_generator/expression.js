@@ -8,6 +8,21 @@ class ExpressionGenerator {
 	}
 
 	generateExpression(expression) {
+		//Some values necessary for generating arrays, string literals are included because they are stored as byte arrays
+		let arrayDataType;
+		let variableName;
+
+		if (expression.type == Nodes.ARRAY || expression.type == Nodes.STRING_LITERAL) {
+			arrayDataType = this.assembly.currentStatement.dataType.value;
+
+			//Determine name for label
+			if (this.assembly.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.assembly.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {
+				variableName = this.assembly.currentStatement.identifier.value;
+			} else {
+				throw `Cannot use array in statement of type ${this.assembly.currentStatement.type}`;
+			}
+		}
+
 		if (expression.type == Nodes.INTEGER_LITERAL) {
 			let register = this.memory.allocateRegister();
 			this.assembly.addInstruction(`mov ${register}, ${expression.value.value}`);
@@ -101,18 +116,12 @@ class ExpressionGenerator {
 			if (func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
-		} else if (expression.type == Nodes.ARRAY) {
-			let arrayDataType = this.assembly.currentStatement.dataType.value;
-
-			//Determine name for label
-			let variableName;
-			if (this.assembly.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.assembly.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {
-				variableName = this.assembly.currentStatement.identifier.value;
-			} else {
-				throw `Cannot use array in statement of type ${this.assembly.currentStatement.type}`;
-			}
+		} else if (expression.type == Nodes.ARRAY) {	
 			//Allocate array in the data section
 			return this.memory.allocateArray(variableName, arrayDataType, expression.values.map(x => x.value));
+		} else if (expression.type == Nodes.STRING_LITERAL) {
+			//Allocate string in the data section, string is stored as byte array
+			return this.memory.allocateArray(variableName, arrayDataType, expression.value.value.split("").map(x => x.charCodeAt(0)));
 		}
 
 		throw `Cannot currently handle expression "${expression.type}".`;
