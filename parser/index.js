@@ -21,10 +21,13 @@ comparison := term ((">" | ">=" | "<" | "<=") term )*
 term := factor (( "-" | "+" ) factor)*
 factor := unary (( "/" | "*" ) unary)*
 unary := (( "!" | "-" ) unary) | primary
-primary := NUMBER | "(" expression ")" | IDENTIFIER | callExpression
+primary := NUMBER | array | "(" expression ")" | IDENTIFIER[ arrayIndex ] | callExpression
+
+array = "{" [ NUMBER ("," NUMBER) ] "}"
+arrayIndex = "[" NUMBER "]"
 
 //Expressions
-assignmentExpression := IDENTIFIER ["=" expression]
+assignmentExpression := IDENTIFIER[ "[" [ NUMBER ] "]" ] ["=" expression]
 callExpression := IDENTIFIER "(" [arguments] ")"
 
 //Declarations
@@ -289,8 +292,21 @@ class Parser {
 
     parseAssignmentExpression() {
         let identifier = this.get();
+    
+		//Array
+		let array = false;
+		let arraySize;
+		let bracketStart;
+		if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
+			bracketStart = this.previous().start; //Used for showing error when array size is missing
+
+			array = true;
+			if (this.match(Tokens.INTEGER_LITERAL)) arraySize = this.previous();
+
+			this.expect(Tokens.RIGHT_SQUARE_BRACE);
+		}
         
-        let expression;
+		let expression;
         let operator;
         if (this.match([Tokens.EQUAL, Tokens.PLUS_EQUAL, Tokens.MINUS_EQUAL, Tokens.STAR_EQUAL, Tokens.SLASH_EQUAL])) {
             operator = this.previous();
@@ -301,7 +317,10 @@ class Parser {
             type: Nodes.ASSIGNMENT_EXPRESSION,
             identifier,
             operator,
-            expression
+            expression,
+			array,
+			arraySize,
+			bracketStart
         };
     }
 
@@ -435,6 +454,22 @@ class Parser {
             value: this.previous()
         };
 
+		if (this.match(Tokens.LEFT_CURLY_BRACE)) {
+			let numbers = [];
+			while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) {
+				let number = this.expect(Tokens.INTEGER_LITERAL);
+				numbers.push(number);
+
+				if (this.peek().type != Tokens.RIGHT_CURLY_BRACE) this.expect(Tokens.COMMA);
+			}
+			this.expect(Tokens.RIGHT_CURLY_BRACE);
+
+			return {
+				type: Nodes.ARRAY,
+				numbers
+			};
+		}
+
         if (this.match(Tokens.LEFT_PAREN)) {
             let expression = this.parseExpression();
             this.expect(Tokens.RIGHT_PAREN);
@@ -447,9 +482,19 @@ class Parser {
                 return this.parseCallExpression();
             } else {
                 //Variable
+				let value = this.get();
+
+				//Check for array index
+				let arrayIndex;
+				if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
+					arrayIndex = this.expect(Tokens.INTEGER_LITERAL);
+					this.expect(Tokens.RIGHT_SQUARE_BRACE);
+				}
+
                 return {
                     type: Nodes.VARIABLE,
-                    value: this.get()
+                    value,
+					arrayIndex
                 };
             }
         }

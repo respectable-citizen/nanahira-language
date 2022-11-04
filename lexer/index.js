@@ -122,6 +122,16 @@ class Lexer {
                 this.addToken({
                     type: Tokens.RIGHT_CURLY_BRACE
                 });
+            }  else if (this.peek() == "[") {
+                this.advance();
+                this.addToken({
+                    type: Tokens.LEFT_SQUARE_BRACE
+                });
+            } else if (this.peek() == "]") {
+                this.advance();
+                this.addToken({
+                    type: Tokens.RIGHT_SQUARE_BRACE
+                });
             } else if (this.peek() == '"') {
 				this.advance();
 

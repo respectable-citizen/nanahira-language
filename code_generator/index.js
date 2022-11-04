@@ -35,7 +35,8 @@ class CodeGenerator {
             "r15":  true,
         };
 
-        this.currentFunc; //Stores the current function that is being parsed.
+        this.currentFunc;               //Stores the function that is currently being parsed.
+		this.currentStatement;          //Stores the statement that is currently being parsed.
         this.scope = new GlobalScope(); //Stores scope information for semantic analysis and such
 
         //Add primitive data types
@@ -43,6 +44,31 @@ class CodeGenerator {
             this.scope.addDataType(type);
         }
     }
+
+	//Returns size in bits of a given data type
+	getSizeFromDataType(dataType) {
+		if (dataType == "uint8" || dataType == "int8") return 8;
+		if (dataType == "uint16" || dataType == "int16") return 16;
+		if (dataType == "uint32" || dataType == "int32") return 32;
+		if (dataType == "uint64" || dataType == "int64") return 64;
+
+		throw `Cannot determine size of data type "${dataType}"`;
+	}
+
+	//Generates corresponding assembly code that represents the location of that data (registers/memory/stack)
+	retrieveFromLocation(loc) {
+		if (loc.type == "register") return loc.loc;
+		else if (loc.type == "memory") {
+			let variable = this.getCurrentFunction().getVariable(loc.loc);
+			let bytesPerElement = this.getSizeFromDataType(variable.dataType) / 8;
+			
+			let memoryOffset = "";
+			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
+			return `[${loc.loc}${memoryOffset}]`;
+		}
+
+		throw `Cannot handle location type ${loc.type}`;
+	}
 
     //Returns the scope of the current function being parsed
     getCurrentFunction() {
@@ -153,17 +179,32 @@ class CodeGenerator {
         let dataType = statement.dataType.value;
         if (!this.scope.getDataType(dataType)) throw new Error.Generator(`Data type "${dataType}" does not exist.`, statement.dataType.start);
 
-        //Generate code to evaluate expression
-        let register = this.generateExpression(statement.expression);
+		//Check if variable has been initialized
+		if (statement.expression) {
+        	//Generate code to evaluate expression
+        	let loc = this.generateExpression(statement.expression);
+		
 
-        //Remember where the variable is stored
-        this.getCurrentFunction().addVariable(identifier, {
-            type: "register",
-            loc: register
-        }, dataType);
+        	//Add variable to function scope
+	        this.getCurrentFunction().addVariable(identifier, loc, dataType);
+		} else {
+			if (statement.array) {
+				if (!statement.arraySize) throw new Error.Generator(`Cannot leave array uninitialized without providing array size.`, statement.bracketStart);
 
-        //Ensure register isn't storing a value unfit for the data type 
-        this.sizeRegisterToDataType(register, dataType); 
+				this.assembly.bss.labels.push(new Label(statement.identifier.value, `resb ${(this.getSizeFromDataType(dataType) / 8 * statement.arraySize.value)}`));
+
+				//Add variable to function scope
+	        	this.getCurrentFunction().addVariable(identifier, {
+					type: "memory",
+					loc: statement.identifier.value
+				}, dataType);
+			} else {
+				throw "Compiler does not currently supporting declaring variables without initialization";
+			}
+		}
+
+		//Ensure register isn't storing a value unfit for the data type 
+        //this.sizeRegisterToDataType(register, dataType); 
     }
 
     generateExpression(expression) {
@@ -171,7 +212,10 @@ class CodeGenerator {
             let register = this.allocateRegister();
             this.addInstruction(`mov ${register}, ${expression.value.value}`);
             
-            return register;
+            return {
+				type: "register",
+				loc: register
+			};
         } else if (expression.type == Nodes.BINARY_EXPRESSION) {
             let leftRegister;
             let rightRegister;
@@ -189,17 +233,29 @@ class CodeGenerator {
                 this.addInstruction(`add ${leftRegister}, ${rightRegister}`);
 
                 this.freeRegister(rightRegister);
-                return leftRegister;
+            	
+				return {
+					type: "register",
+					loc: leftRegister
+				};
             } else if (expression.operator == Tokens.MINUS) {
                 this.addInstruction(`sub ${leftRegister}, ${rightRegister}`);
 
                 this.freeRegister(rightRegister);
-                return leftRegister;
+	
+				return {
+					type: "register",
+					loc: leftRegister
+				};
             } else if (expression.operator == Tokens.STAR) {
                 this.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
 
                 this.freeRegister(rightRegister);
-                return leftRegister;
+
+				return {
+					type: "register",
+					loc: leftRegister
+				};
             } else if (expression.operator == Tokens.SLASH) {
                 //Ensure dividend is in RAX
                 if (leftRegister != "rax") {
@@ -213,22 +269,31 @@ class CodeGenerator {
                 this.addInstruction(`div ${rightRegister}`);
                 this.freeRegister(rightRegister);
 
-                return "rax";
+                return {
+					type: "register",
+					loc: "rax"
+				};
             }
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
         } else if (expression.type == Nodes.VARIABLE) {
             let variable = this.getCurrentFunction().getVariable(expression.value.value);
 			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
+			
+			let loc = structuredClone(variable.loc);
+			loc.index = expression.arrayIndex.value;
 
-            if (variable.loc.type == "register") return variable.loc.loc;
+			return loc;
         } else if (expression.type == Nodes.UNARY_EXPRESSION) {
             if (expression.operator == Tokens.MINUS) {
 				let expressionRegister = this.generateExpression(expression.expression);
 
             	this.addInstruction(`neg ${expressionRegister}`);
             	
-				return expressionRegister;
+				return {
+					type: "register",
+					loc: expressionRegister
+				};
 			}
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
@@ -237,6 +302,30 @@ class CodeGenerator {
 			if (func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
+		} else if (expression.type == Nodes.ARRAY) {
+			let arrayDataType = this.currentStatement.dataType.value;
+			let variableName;
+			if (this.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {
+				variableName = this.currentStatement.identifier.value;
+			} else {
+				throw `Cannot use array in statement of type ${this.currentStatement.type}`;
+			}
+
+			let assemblyDeclareSizeBits = this.getSizeFromDataType(arrayDataType);
+			let assemblyDeclareSize;
+			if (assemblyDeclareSizeBits == 8) assemblyDeclareSize = "db";
+			else if (assemblyDeclareSizeBits == 16) assemblyDeclareSize = "dw";
+			else if (assemblyDeclareSizeBits == 32) assemblyDeclareSize = "dd";
+			else if (assemblyDeclareSizeBits == 64) assemblyDeclareSize = "dq";
+			
+			if (!assemblyDeclareSize) throw `Unable to reserve size of ${assemblyDeclareSizeBits} bits`;
+
+			this.assembly.data.labels.push(new Label(variableName, `${assemblyDeclareSize} ${expression.numbers.map(x => x.value).join(", ")}`));
+			
+			return {
+				type: "memory",
+				loc: variableName
+			};
 		}
 
         throw `Cannot currently handle expression "${expression.type}".`;
@@ -276,16 +365,16 @@ class CodeGenerator {
     }
 
     generateReturnStatement(statement) {
-    	let register = this.generateExpression(statement.expression);
-
+    	let loc = this.retrieveFromLocation(this.generateExpression(statement.expression));
+		
 		if (this.currentFunc == "main") {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
 			this.addInstruction(`mov rax, 60`);
-			this.addInstruction(`mov rdi, ${register}`);
+			this.addInstruction(`mov rdi, ${loc}`);
 			this.addInstruction(`syscall`);
 		} else {
-    		this.addInstruction(`mov rax, ${register}`); //rax is the designated return register
+    		this.addInstruction(`mov rax, ${loc}`); //rax is the designated return register
 			this.freeRegister(register);
 		
 			this.addInstruction(`pop rbp`); //Restore old base pointer
@@ -333,6 +422,8 @@ class CodeGenerator {
 
     generateBlock(block) {
         for (let statement of block) {
+			this.currentStatement = statement;
+
 			try {
             	if (statement.type == Nodes.VARIABLE_DECLARATION) {
                 	this.generateVariableDeclaration(statement);

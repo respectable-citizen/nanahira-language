@@ -5,11 +5,6 @@ class Label {
         this.name = name;
         this.instructions = instructions;
     }
-
-    output() {
-        return `${this.name}:
-${this.instructions.join("\n")}`;
-    }
 }
 
 class Section {
@@ -18,8 +13,17 @@ class Section {
         this.labels = labels;
     }
 
+	getLabelOutput(label) {
+		if (this.name == "text") {
+        	return `${label.name}:
+${label.instructions.join("\n")}`;
+		} else {
+			return `${label.name}: ${label.instructions}`;
+		}
+    }
+
     getAllLabelOutput() {
-        let labelOutput = this.labels.map(label => label.output());
+        let labelOutput = this.labels.map(label => this.getLabelOutput(label));
         return labelOutput.join("\n");
     }
 
@@ -31,16 +35,19 @@ ${this.getAllLabelOutput()}`;
 
 class Assembly {
     constructor() {
-        this.text = new Section("text");
         this.data = new Section("data");
+        this.text = new Section("text");
+        this.bss = new Section("bss");
     }
 
     output() {
         return `global main
 
-${this.text.output()}
+${this.data.output()}
 
-${this.data.output()}`;
+${this.bss.output()}
+
+${this.text.output()}`;
     }
 }
 
