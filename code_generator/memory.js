@@ -47,7 +47,7 @@ class Memory {
 			return `[${loc.loc}${memoryOffset}]`;
 		} else if (loc.type == "stack") {
 			let memoryOffset = "";
-			if (loc.baseOffset) memoryOffset = ` - ${Math.abs(loc.baseOffset)}`;
+			if (loc.baseOffset) memoryOffset = ` - ${Math.abs(loc.baseOffset + loc.index)}`;
 
 			return `[rbp${memoryOffset}]`;
 		} else {
@@ -56,9 +56,12 @@ class Memory {
 	}
 
 	//Moves location into a specific register
-	moveLocationIntoRegister(register, loc) {
+	moveLocationIntoRegister(register, loc, dereference = false) {
 		loc = this.retrieveFromLocation(loc);
-		this.assembly.addInstruction(`lea ${register}, ${loc}`);
+		
+		if (loc.index !== null) dereference = true; //If we are using an array index, we want the value not the address
+
+		this.assembly.addInstruction(`${dereference ? "mov" : "lea"} ${register}, ${loc}`);
 	}
 
 	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen

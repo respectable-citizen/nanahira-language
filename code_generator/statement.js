@@ -95,13 +95,13 @@ class StatementGenerator {
     }
 
 	generateReturnStatement(statement) {
-    	let loc = this.memory.retrieveFromLocation(this.expression.generateExpression(statement.expression));
+    	let loc = this.expression.generateExpression(statement.expression);
 		
 		if (this.assembly.currentFunctionIdentifier == "main") {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
 			this.assembly.addInstruction(`mov rax, 60`);
-			this.assembly.addInstruction(`mov rdi, ${loc}`);
+			this.memory.moveLocationIntoRegister("rdi", loc);
 			this.assembly.addInstruction(`syscall`);
 		} else {
     		this.assembly.addInstruction(`mov rax, ${loc}`); //rax is the designated return register
