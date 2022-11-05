@@ -81,6 +81,18 @@ class Assembly {
 		}
 	}
 
+	generateLabel() {
+		const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+		const charactersLength = characters.length;
+
+		let label = "";
+		for (let i = 0; i < 10; i++) {
+			label += characters.charAt(Math.floor(Math.random() * charactersLength));
+		}
+		
+		return label;
+	}
+
     output() {
         return `global main
 

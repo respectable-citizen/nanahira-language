@@ -294,7 +294,11 @@ class Lexer {
                          this.addToken({
                             type: Tokens.KEYWORD_RETURN
                         });
-                    } else {
+                    } else if (identifier == "if") {
+                         this.addToken({
+                            type: Tokens.KEYWORD_IF
+                        });
+					} else {
                         this.addToken({
                             type: Tokens.IDENTIFIER,
                             value: identifier

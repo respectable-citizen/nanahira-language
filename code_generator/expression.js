@@ -1,3 +1,4 @@
+const Tokens = require("../lexer/tokens");
 const Nodes = require("../parser/nodes");
 
 class ExpressionGenerator {

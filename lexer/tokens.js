@@ -22,5 +22,6 @@ module.exports = {
     AND: "AND", AND_AND: "AND_AND",
 
     //Keywords
-    KEYWORD_RETURN: "KEYWORD_RETURN"
+    KEYWORD_RETURN: "KEYWORD_RETURN",
+    KEYWORD_IF: "KEYWORD_IF"
 };

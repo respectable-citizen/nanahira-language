@@ -1,4 +1,3 @@
-const Tokens = require("../lexer/tokens");
 const Nodes = require("../parser/nodes");
 const Types = require("./types");
 const Error = require("../error");
@@ -27,18 +26,6 @@ class CodeGenerator {
             this.scope.addDataType(dataType);
         }
     }
-
-	handleError(func, node) {
-		try {
-			func.call(this, node);
-		} catch (e) {
-			if (e.name == "CodeGeneratorError") {
-				Error.error(e.message, node, e.arrow);
-			} else {
-				throw e;
-			}
-		}
-	}
 
 	getFunctionNode(identifier) {
 		return this.functions.filter(node => node.identifier.value == identifier)[0];
@@ -78,33 +65,15 @@ class CodeGenerator {
 			}, parameter.dataType.value);
 		}
 
-        this.generateBlock(this.assembly.currentFunction.block);
+        this.statement.generateBlock(this.assembly.currentFunction.block);
 	
 		this.assembly.finishFunction();
-    }
-
-	generateBlock(block) {
-        for (let statement of block) this.handleError(this.generateStatement, statement); 
-    }
-
-	generateStatement(statement) {
-		this.assembly.currentStatement = statement;
-		
-		if (statement.type == Nodes.VARIABLE_DECLARATION) {
-			this.statement.generateVariableDeclaration(statement);
-		} else if (statement.type == Nodes.RETURN_STATEMENT) {
-			this.statement.generateReturnStatement(statement);
-		} else if (statement.type == Nodes.EXPRESSION_STATEMENT) {
-			this.statement.generateExpressionStatement(statement);
-		} else {
-			throw `Cannot generate statement of type ${statement.type}`;
-		}
-	}
+    }	
 
     run() {
         if (!this.getFunctionNode("main")) throw "Missing main function.";
 
-        for (let func of this.functions) this.handleError(this.generateFunction, func);
+        for (let func of this.functions) this.statement.handleError(this.generateFunction, func, this);
 		
 		this.output = this.assembly.output();
     }

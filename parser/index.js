@@ -35,10 +35,11 @@ functionDeclaration := IDENTIFIER IDENTIFIER "(" [parameters] ")" block
 variableDeclaration = IDENTIFIER assignmentExpression ";" //Same as assignmentExpression, but with a data type because the variable is being declared for the first time
 
 //Statements
-statement := expressionStatement | returnStatement
+statement := expressionStatement | returnStatement | ifStatement
 
 expressionStatement := (assignmentExpression | callExpression) ";"
 returnStatement := "return" expression ";"
+ifStatement := if "(" expression ")" block
 
 */
 
@@ -203,10 +204,20 @@ class Parser {
     }
 
     parseStatement() {
-        if (this.peek().type == Tokens.KEYWORD_RETURN) return this.parseReturnStatement();
-        if (this.peek().type == Tokens.IDENTIFIER) return this.parseExpressionStatement();
-        
-		this.unexpectedToken();
+		let start = this.peek().start;
+		
+		let statement;
+        if (this.peek().type == Tokens.KEYWORD_RETURN) statement = this.parseReturnStatement();
+        if (this.peek().type == Tokens.KEYWORD_IF) statement = this.parseIfStatement();
+        if (this.peek().type == Tokens.IDENTIFIER) statement = this.parseExpressionStatement();
+		if (!statement) this.unexpectedToken();
+		
+		let end = this.previous().end;
+	
+		statement.start = start;
+		statement.end = end;
+
+		return statement;
     }
 
     parseExpressionStatement() {
@@ -245,6 +256,23 @@ class Parser {
 			line: this.previous().line
         };
     }
+
+	parseIfStatement() {
+		this.expect(Tokens.KEYWORD_IF);
+		this.expect(Tokens.LEFT_PAREN);
+
+		let expression = this.parseExpression();
+
+		this.expect(Tokens.RIGHT_PAREN);
+	
+		let block = this.parseBlock();
+
+		return {
+			type: Nodes.IF_STATEMENT,
+			expression,
+			block
+		};
+	}
 
     parseBlock() {
         this.expect(Tokens.LEFT_CURLY_BRACE);

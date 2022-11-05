@@ -3,8 +3,10 @@ uint64 main() {
 	uint8 text[] = "Hello, World!";
 	uint8 newline[] = { 10 };
 
-	syscall(1, 1, text, 13);
-	syscall(1, 1, newline, 1);
+	if (5 - 4) {
+		syscall(1, 1, text, 13);
+		syscall(1, 1, newline, 1);
+	}
 
 	return 0;
 }

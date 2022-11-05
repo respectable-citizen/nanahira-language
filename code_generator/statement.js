@@ -10,6 +10,38 @@ class StatementGenerator {
 
 		this.expression = new ExpressionGenerator(this.scope, this.assembly, this.memory);
 	}
+	
+	handleError(func, node, context = this) {
+		try {
+			func.call(context, node);
+		} catch (e) {
+			if (e.name == "CodeGeneratorError") {
+				Error.error(e.message, node, e.arrow);
+			} else {
+				throw e;
+			}
+		}
+	}
+
+	generateBlock(block) {
+        for (let statement of block) this.handleError(this.generateStatement, statement); 
+    }
+
+	generateStatement(statement) {
+		this.assembly.currentStatement = statement;
+		
+		if (statement.type == Nodes.VARIABLE_DECLARATION) {
+			this.generateVariableDeclaration(statement);
+		} else if (statement.type == Nodes.RETURN_STATEMENT) {
+			this.generateReturnStatement(statement);
+		} else if (statement.type == Nodes.EXPRESSION_STATEMENT) {
+			this.generateExpressionStatement(statement);
+		} else if (statement.type == Nodes.IF_STATEMENT) {
+			this.generateIfStatement(statement);
+		} else {
+			throw `Cannot generate statement of type ${statement.type}`;
+		}
+	}
 
 	generateExpressionStatement(statement) {
 		if (statement.expression.type == Nodes.ASSIGNMENT_EXPRESSION) {
@@ -81,7 +113,19 @@ class StatementGenerator {
 			this.assembly.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
 		}
 	}
+	
+	generateIfStatement(statement) {
+		let loc = this.expression.generateExpression(statement.expression);
+	
+		//Label that if jumped to, will skip the if block
+		let skipLabel = this.assembly.generateLabel();
 
+		let register = this.memory.moveLocationIntoARegister(loc);
+		this.assembly.addInstruction(`cmp ${register}, 1`);
+		this.assembly.addInstruction(`jne ${skipLabel}`);
+		this.generateBlock(statement.block);
+		this.assembly.addInstruction(`${skipLabel}:`);
+	}
 }
 
 module.exports = StatementGenerator;

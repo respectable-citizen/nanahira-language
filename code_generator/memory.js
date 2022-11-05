@@ -55,9 +55,20 @@ class Memory {
 		}
 	}
 
+	//Moves location into a specific register
 	moveLocationIntoRegister(register, loc) {
 		loc = this.retrieveFromLocation(loc);
 		this.assembly.addInstruction(`lea ${register}, ${loc}`);
+	}
+
+	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen
+	moveLocationIntoARegister(loc) {
+		if (loc.type == "register") return loc.loc;
+
+		let register = this.allocateRegister();
+		this.moveLocationIntoRegister(register, loc);
+
+		return register
 	}
 
 	allocateRegister() {
