@@ -38,11 +38,11 @@ class ExpressionGenerator {
 
 			//Evaluate binary expressions first, as to not waste registers by loading in unused values
 			if (expression.left.type == Nodes.BINARY_EXPRESSION) {
-				leftRegister = this.generateExpression(expression.left);
-				rightRegister = this.generateExpression(expression.right);
+				leftRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.left));
+				rightRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
 			} else {
-				rightRegister = this.generateExpression(expression.right);
-				leftRegister = this.generateExpression(expression.left);
+				rightRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
+				leftRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.left));
 			}
 
 			if (expression.operator == Tokens.PLUS) {
