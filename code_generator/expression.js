@@ -95,7 +95,7 @@ class ExpressionGenerator {
 			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
 
 			let loc = structuredClone(variable.loc);
-			loc.index = expression.arrayIndex.value;
+			if (expression.arrayIndex) loc.index = expression.arrayIndex.value;
 
 			return loc;
 		} else if (expression.type == Nodes.UNARY_EXPRESSION) {
@@ -117,11 +117,11 @@ class ExpressionGenerator {
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
 		} else if (expression.type == Nodes.ARRAY) {	
-			//Allocate array in the data section
-			return this.memory.allocateArray(variableName, arrayDataType, expression.values.map(x => x.value));
+			//Allocate array pm the stack
+			return this.memory.allocateArrayStack(variableName, arrayDataType, expression.values.map(x => x.value));
 		} else if (expression.type == Nodes.STRING_LITERAL) {
-			//Allocate string in the data section, string is stored as byte array
-			return this.memory.allocateArray(variableName, arrayDataType, expression.value.value.split("").map(x => x.charCodeAt(0)));
+			//Allocate string on the stack, string is stored as byte array
+			return this.memory.allocateArrayStack(variableName, arrayDataType, expression.value.value.split("").map(x => x.charCodeAt(0)));
 		}
 
 		throw `Cannot currently handle expression "${expression.type}".`;
@@ -203,7 +203,7 @@ class ExpressionGenerator {
 		
 		this.assembly.addInstruction(`mov rax, ${statement.args[0].value.value}`);
 		this.assembly.addInstruction(`mov rdi, ${statement.args[1].value.value}`);
-		this.assembly.addInstruction(`mov rsi, ${statement.args[2].value.value}`);
+		this.memory.moveLocationIntoRegister("rsi", this.generateExpression(statement.args[2]));
 		this.assembly.addInstruction(`mov rdx, ${statement.args[3].value.value}`);
 		this.assembly.addInstruction(`syscall`);
 	}

@@ -41,10 +41,13 @@ class Assembly {
         this.text = new Section("text");
         this.bss = new Section("bss");
 
-        this.instructions = []; //Buffer for storing instructions.
+        this.instructions = [];      //Buffer for storing instructions.
+
+		this.stackPointerOffset = 0; //How much has the stack pointer moved since we started generating the current function (rsp - rbp)
 	}
 
 	startFunction(identifier) {
+		this.stackPointerOffset = 0;
 		this.currentFunctionIdentifier = identifier;
         
 		this.scope.addFunction({
@@ -66,6 +69,16 @@ class Assembly {
 
 	addDataEntry(name, size, value) {
 		this.data.labels.push(new Label(name, `${size} ${value}`));
+	}
+
+	moveStackPointer(amount) {
+		this.stackPointerOffset += amount;
+		
+		if (amount >= 0) {
+			this.addInstruction(`add rsp, ${amount}`);
+		} else {
+			this.addInstruction(`sub rsp, ${Math.abs(amount)}`);
+		}
 	}
 
     output() {

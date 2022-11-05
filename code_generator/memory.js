@@ -34,7 +34,7 @@ class Memory {
 		throw `Cannot determine size of data type "${dataType}"`;
 	}
 
-	//Generates corresponding assembly code that represents the location of that data (registers/memory/stack)
+	//Generates corresponding assembly code that retrieves data from its location (registers/memory/stack)
 	retrieveFromLocation(loc) {
 		if (loc.type == "register") return loc.loc;
 		else if (loc.type == "memory") {
@@ -43,10 +43,21 @@ class Memory {
 			
 			let memoryOffset = "";
 			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
-			return `[${loc.loc}${memoryOffset}]`;
-		}
 
-		throw `Cannot handle location type ${loc.type}`;
+			return `[${loc.loc}${memoryOffset}]`;
+		} else if (loc.type == "stack") {
+			let memoryOffset = "";
+			if (loc.baseOffset) memoryOffset = ` - ${Math.abs(loc.baseOffset)}`;
+
+			return `[rbp${memoryOffset}]`;
+		} else {
+			throw `Cannot handle location type ${loc.type}`;
+		}
+	}
+
+	moveLocationIntoRegister(register, loc) {
+		loc = this.retrieveFromLocation(loc);
+		this.assembly.addInstruction(`lea ${register}, ${loc}`);
 	}
 
 	allocateRegister() {
@@ -68,7 +79,7 @@ class Memory {
 		this.assembly.addDataEntry(name, size, values.join(", "));
 	}
 
-	allocateArray(name, arrayDataType, values) {
+	/*allocateArray(name, arrayDataType, values) {
 		//Convert data type into assembly declare (db, dw, dd, dq)
 		let dataTypeSizeBits = this.getSizeFromDataType(arrayDataType);
 		let assemblyDeclareSize;
@@ -86,6 +97,38 @@ class Memory {
 		return {
 			type: "memory",
 			loc: name
+		};
+	}*/
+
+	//Allocates array on the stack
+	allocateArrayStack(name, arrayDataType, values) {
+		let dataTypeSizeBits = this.getSizeFromDataType(arrayDataType);
+		let arraySizeBytes = (dataTypeSizeBits / 8) * values.length;
+
+		//Determine operation size
+		let operationSize;
+		if (dataTypeSizeBits == 8) operationSize = "byte";
+		else if (dataTypeSizeBits == 16) operationSize = "word";
+		else if (dataTypeSizeBits == 32) operationSize = "dword";
+		else if (dataTypeSizeBits == 64) operationSize = "qword";
+			
+		if (!operationSize) throw `Unable to reserve size of ${dataTypeSizeBits} bits`;
+	
+
+		//Allocate required bytes on the stack
+		this.assembly.moveStackPointer(-arraySizeBytes);
+
+		//Move data into allocated space
+		for (let i = 0; i < values.length; i++) {
+			let offset = "";
+			if (i) offset = ` + ${i}`;
+
+			this.assembly.addInstruction(`mov ${operationSize} [rsp${offset}], ${values[i]}`);
+		}
+
+		return {
+			type: "stack",
+			baseOffset: this.assembly.stackPointerOffset
 		};
 	}
 }
