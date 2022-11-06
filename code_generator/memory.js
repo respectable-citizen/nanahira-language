@@ -40,17 +40,14 @@ class Memory {
 	//Generates corresponding assembly code that retrieves data from its location (registers/memory/stack)
 	retrieveFromLocation(loc) {
 		if (loc.type == "register") {
-			console.log(loc)
-			let variable = this.scope.getVariable(loc.loc);
-			let bytesPerElement = this.getSizeFromDataType(variable.dataType) / 8;
+			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
 			let memoryOffset = "";
 			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
 
 			return `[${loc.loc}${memoryOffset}]`;
 		} else if (loc.type == "memory") {
-			let variable = this.scope.getVariable(loc.loc);
-			let bytesPerElement = this.getSizeFromDataType(variable.dataType) / 8;
+			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
 			let memoryOffset = "";
 			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
