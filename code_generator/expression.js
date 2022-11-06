@@ -1,11 +1,13 @@
 const Tokens = require("../lexer/tokens");
 const Nodes = require("../parser/nodes");
+const Error = require("../error");
 
 class ExpressionGenerator {
-	constructor(scope, assembly, memory) {
+	constructor(scope, assembly, memory, ast) {
 		this.scope = scope;
 		this.assembly = assembly;
 		this.memory = memory;
+		this.ast = ast;
 	}
 
 	generateExpression(expression) {
@@ -113,7 +115,7 @@ class ExpressionGenerator {
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
 		} else if (expression.type == Nodes.CALL_EXPRESSION) {
-			let func = this.getFunction(expression.identifier.value);
+			let func = this.ast.getFunctionNode(expression.identifier.value);
 			if (func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
@@ -188,7 +190,10 @@ class ExpressionGenerator {
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);
 
-		return "rax"; //rax is the designated return register
+		return {
+			type: "register",
+			loc: "rax"
+		}; //rax is the designated return register
 	}
 
 	generateASMCall(statement) {

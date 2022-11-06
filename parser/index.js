@@ -31,8 +31,10 @@ assignmentExpression := IDENTIFIER[ "[" [ NUMBER ] "]" ] ["=" expression]
 callExpression := IDENTIFIER "(" [arguments] ")"
 
 //Declarations
-functionDeclaration := IDENTIFIER IDENTIFIER "(" [parameters] ")" block
-variableDeclaration = IDENTIFIER assignmentExpression ";" //Same as assignmentExpression, but with a data type because the variable is being declared for the first time
+functionDeclaration := dataType IDENTIFIER "(" [parameters] ")" block
+variableDeclaration := dataType assignmentExpression ";" //Same as assignmentExpression, but with a data type because the variable is being declared for the first time
+
+dataType = IDENTIFIER [ "[" "]" ]
 
 //Statements
 statement := expressionStatement | returnStatement | ifStatement
@@ -138,23 +140,23 @@ class Parser {
 
     determineDeclarationType() {
         if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
-        if (this.peekNext().type != Tokens.IDENTIFIER) return Nodes.NONE;
-        
-        let token = this.peekOffset(2);
+       
+		//Skip pairs of array brackets
+		let offset = 1;
+    	while (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.RIGHT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.INTEGER_LITERAL) offset++;
 
-        if (token.type == Tokens.LEFT_PAREN) return Nodes.FUNCTION_DECLARATION;
+		if (this.peekOffset(offset).type != Tokens.IDENTIFIER) return Nodes.NONE;
 
-        return Nodes.VARIABLE_DECLARATION;
-    }
+		if (this.peekOffset(offset + 1).type == Tokens.LEFT_PAREN) return Nodes.FUNCTION_DECLARATION;
+		return Nodes.VARIABLE_DECLARATION;
+	}
 
 	determineExpressionStatementType() {
 		if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
 	
-		let token = this.peekNext();
-		if (token.type == Tokens.LEFT_PAREN) return Nodes.CALL_EXPRESSION;
-		if (token.type == Tokens.EQUAL) return Nodes.ASSIGNMENT_EXPRESSION;
-	
-		return Nodes.NONE;
+		if (this.peekNext().type == Tokens.LEFT_PAREN) return Nodes.CALL_EXPRESSION;
+		
+		return Nodes.ASSIGNMENT_EXPRESSION;
 	}
 
     parseDeclaration() {
@@ -167,8 +169,8 @@ class Parser {
     }
 
     parseFunctionDeclaration() {
-        let returnType = this.get();
-        let identifier = this.get();
+        let returnType = this.parseDataType();
+        let identifier = this.expect(Tokens.IDENTIFIER);
         this.expect(Tokens.LEFT_PAREN);
         let parameters = [];
         if (this.peek().type != Tokens.RIGHT_PAREN) parameters = this.parseParameters();
@@ -190,11 +192,11 @@ class Parser {
     }
 
     parseVariableDeclaration() {
-        let dataType = this.get();
+        let dataType = this.parseDataType();
         let assignment = this.parseAssignmentExpression();
         assignment.type = Nodes.VARIABLE_DECLARATION;
         assignment.dataType = dataType;
-		assignment.start = dataType.start;
+		assignment.start = dataType.identifier.start;
 		assignment.end = this.peek().end;
 		assignment.line = this.peek().line;
         
@@ -202,6 +204,24 @@ class Parser {
         
 		return assignment;
     }
+
+	parseDataType() {
+		let identifier = this.expect(Tokens.IDENTIFIER);
+		let isArray = false;
+		let arraySize;
+		if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
+			isArray = true;
+			if (this.match(Tokens.INTEGER_LITERAL))	arraySize = this.previous();
+			this.expect(Tokens.RIGHT_SQUARE_BRACE);
+		}
+
+		return {
+			type: Nodes.DATA_TYPE,
+			identifier,
+			isArray,
+			arraySize
+		};
+	}
 
     parseStatement() {
 		let start = this.peek().start;
@@ -305,8 +325,8 @@ class Parser {
                 expectComma = true;
             }
 
-            let dataType = this.get();
-            let identifier = this.get();
+            let dataType = this.parseDataType();
+            let identifier = this.expect(Tokens.IDENTIFIER);
 
             parameters.push({
                 type: Nodes.PARAMETER,
@@ -319,8 +339,8 @@ class Parser {
     }
 
     parseAssignmentExpression() {
-        let identifier = this.get();
-    
+        let identifier = this.expect(Tokens.IDENTIFIER);
+		
 		//Array
 		let array = false;
 		let arraySize;
@@ -353,7 +373,7 @@ class Parser {
     }
 
     parseCallExpression() {
-        let identifier = this.get();
+        let identifier = this.expect(Tokens.IDENTIFIER);
         
         this.expect(Tokens.LEFT_PAREN);
         
@@ -510,7 +530,7 @@ class Parser {
                 return this.parseCallExpression();
             } else {
                 //Variable
-				let value = this.get();
+				let value = this.expect(Tokens.IDENTIFIER);
 
 				//Check for array index
 				let arrayIndex;

@@ -1,14 +1,16 @@
 const Nodes = require("../parser/nodes");
+const Error = require("../error");
 
 const ExpressionGenerator = require("./expression");
 
 class StatementGenerator {
-	constructor(scope, assembly, memory) {
+	constructor(scope, assembly, memory, ast) {
 		this.scope = scope;
 		this.assembly = assembly;
 		this.memory = memory;
+		this.ast = ast;
 
-		this.expression = new ExpressionGenerator(this.scope, this.assembly, this.memory);
+		this.expression = new ExpressionGenerator(this.scope, this.assembly, this.memory, this.ast);
 	}
 	
 	handleError(func, node, context = this) {
@@ -60,31 +62,35 @@ class StatementGenerator {
 			Error.error(`Variable "${identifier}" has already been declared`, statement);
         }
 
-        let dataType = statement.dataType.value;
-        if (!this.scope.getDataType(dataType)) throw new Error.Generator(`Data type "${dataType}" does not exist.`, statement.dataType.start);
+        if (!this.scope.getDataType(statement.dataType.identifier.value)) throw new Error.Generator(`Data type "${statement.dataType.identifier.value}" does not exist.`, statement.dataType.identifier.start);
 
 		//Check if variable has been initialized
 		if (statement.expression) {
         	//Generate code to evaluate expression
         	let loc = this.expression.generateExpression(statement.expression);
-		
+			
+			console.log(`generating variable declaration for ${identifier}`);
+			console.log(loc);
+			console.log(statement.dataType);
+
         	//Add variable to function scope
 	        this.scope.addVariable({
 				name: identifier,
 				loc,
-				dataType
+				dataType: statement.dataType
 			});
 		} else {
-			if (statement.array) {
-				if (!statement.arraySize) throw new Error.Generator(`Cannot leave array uninitialized without providing array size.`, statement.bracketStart);
-
-				this.assembly.bss.labels.push(new Label(statement.identifier.value, `resb ${(this.getSizeFromDataType(dataType) / 8 * statement.arraySize.value)}`));
+			if (statement.dataType.isArray) {
+				if (!statement.dataType.arraySize) throw new Error.Generator(`Cannot leave array uninitialized without providing array size.`, statement.bracketStart);
+				
+				let loc = this.memory.allocateArrayBSS(statement.identifier.value, statement.dataType);
 
 				//Add variable to function scope
-	        	this.scope.addVariable(identifier, {
-					type: "memory",
-					loc: statement.identifier.value
-				}, dataType);
+				this.scope.addVariable({
+					name: statement.identifier.value,
+					dataType: statement.dataType,
+					loc
+				});
 			} else {
 				throw "Compiler does not currently supporting declaring variables without initialization";
 			}
@@ -95,16 +101,19 @@ class StatementGenerator {
     }
 
 	generateReturnStatement(statement) {
+		console.log(this.scope.getVariable("string"));
     	let loc = this.expression.generateExpression(statement.expression);
 		
 		if (this.assembly.currentFunctionIdentifier == "main") {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
 			this.assembly.addInstruction(`mov rax, 60`);
+			console.log("returning");
+			console.log(loc);
 			this.memory.moveLocationIntoRegister("rdi", loc);
 			this.assembly.addInstruction(`syscall`);
 		} else {
-    		this.assembly.addInstruction(`mov rax, ${loc}`); //rax is the designated return register
+    		this.memory.moveLocationIntoRegister("rax", loc); //rax is the designated return register
 			this.memory.freeRegister(loc);
 		
 			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer

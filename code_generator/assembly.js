@@ -62,6 +62,7 @@ class Assembly {
 	
 	finishFunction() {
         this.scope.cleanFunction(this.currentFunctionIdentifier);
+		this.scope.ascendScope();
 
         this.text.labels.push(new Label(this.currentFunctionIdentifier, this.instructions));
 		this.instructions = [];
@@ -69,6 +70,10 @@ class Assembly {
 
 	addDataEntry(name, size, value) {
 		this.data.labels.push(new Label(name, `${size} ${value}`));
+	}
+
+	addBSSEntry(name, bytes) {
+		this.bss.labels.push(new Label(name, `resb ${bytes.toString()}`));
 	}
 
 	moveStackPointer(amount) {

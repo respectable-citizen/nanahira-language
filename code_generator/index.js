@@ -6,6 +6,7 @@ const Scope = require("./scope");
 
 const Assembly = require("./assembly").Assembly;
 const Memory = require("./memory");
+const AST = require("./ast");
 
 const StatementGenerator = require("./statement");
 
@@ -14,22 +15,16 @@ class CodeGenerator {
     constructor(ast) {
         this.scope = new Scope();
         this.assembly = new Assembly(this.scope);
-		this.memory = new Memory(this.assembly);
+		this.memory = new Memory(this.scope, this.assembly);
+		this.ast = new AST(ast);
 
-		this.statement = new StatementGenerator(this.scope, this.assembly, this.memory);
-
-        this.ast = ast;
-        this.functions = this.ast.filter(node => node.type == Nodes.FUNCTION_DECLARATION);
+		this.statement = new StatementGenerator(this.scope, this.assembly, this.memory, this.ast);
 
         //Add primitive data types
         for (let dataType of Types) {
             this.scope.addDataType(dataType);
         }
     }
-
-	getFunctionNode(identifier) {
-		return this.functions.filter(node => node.identifier.value == identifier)[0];
-	}
 
     generateFunction(func) {
 		this.assembly.currentFunction = func;
@@ -71,9 +66,9 @@ class CodeGenerator {
     }	
 
     run() {
-        if (!this.getFunctionNode("main")) throw "Missing main function.";
+        if (!this.ast.getFunctionNode("main")) throw "Missing main function.";
 
-        for (let func of this.functions) this.statement.handleError(this.generateFunction, func, this);
+        for (let func of this.ast.functions) this.statement.handleError(this.generateFunction, func, this);
 		
 		this.output = this.assembly.output();
     }

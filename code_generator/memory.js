@@ -1,7 +1,8 @@
 
 //Manages usage of data segments (data, rodata, bss), stack, heap, and registers
 class Memory {
-	constructor(assembly) {
+	constructor(scope, assembly) {
+		this.scope = scope;
 		this.assembly = assembly;
 
         this.registers = {
@@ -26,6 +27,8 @@ class Memory {
 
 	//Returns size in bits of a given data type
 	getSizeFromDataType(dataType) {
+		dataType = dataType.identifier.value;
+
 		if (dataType == "uint8" || dataType == "int8") return 8;
 		if (dataType == "uint16" || dataType == "int16") return 16;
 		if (dataType == "uint32" || dataType == "int32") return 32;
@@ -36,9 +39,17 @@ class Memory {
 
 	//Generates corresponding assembly code that retrieves data from its location (registers/memory/stack)
 	retrieveFromLocation(loc) {
-		if (loc.type == "register") return loc.loc;
-		else if (loc.type == "memory") {
-			let variable = this.getCurrentFunction().getVariable(loc.loc);
+		if (loc.type == "register") {
+			console.log(loc)
+			let variable = this.scope.getVariable(loc.loc);
+			let bytesPerElement = this.getSizeFromDataType(variable.dataType) / 8;
+			
+			let memoryOffset = "";
+			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
+
+			return `[${loc.loc}${memoryOffset}]`;
+		} else if (loc.type == "memory") {
+			let variable = this.scope.getVariable(loc.loc);
 			let bytesPerElement = this.getSizeFromDataType(variable.dataType) / 8;
 			
 			let memoryOffset = "";
@@ -85,17 +96,31 @@ class Memory {
         throw "Ran out of registers to allocate.";
     }
 
-    freeRegister(register) {
-        this.registers[register] = true;
+	//Can receive register name as a single string
+	//Or a location object
+    freeRegister(loc) {
+        if (typeof loc == "object") {
+			//Don't try to free location if it isn't a register
+			if (loc.type != "register") return;
+
+			//If it is a register, get just the name
+			loc = loc.loc;
+		}
+
+		this.registers[loc] = true;
     }
 
 	allocateData(name, size, values) {
 		this.assembly.addDataEntry(name, size, values.join(", "));
 	}
 
-	/*allocateArray(name, arrayDataType, values) {
+	allocateBSS(name, bytes) {
+		this.assembly.addBSSEntry(name, bytes);
+	}
+
+	/*allocateArray(name, dataType, values) {
 		//Convert data type into assembly declare (db, dw, dd, dq)
-		let dataTypeSizeBits = this.getSizeFromDataType(arrayDataType);
+		let dataTypeSizeBits = this.getSizeFromDataType(dataType);
 		let assemblyDeclareSize;
 		if (dataTypeSizeBits == 8) assemblyDeclareSize = "db";
 		else if (dataTypeSizeBits == 16) assemblyDeclareSize = "dw";
@@ -115,8 +140,8 @@ class Memory {
 	}*/
 
 	//Allocates array on the stack
-	allocateArrayStack(name, arrayDataType, values) {
-		let dataTypeSizeBits = this.getSizeFromDataType(arrayDataType);
+	allocateArrayStack(name, dataType, values) {
+		let dataTypeSizeBits = this.getSizeFromDataType(dataType);
 		let arraySizeBytes = (dataTypeSizeBits / 8) * values.length;
 
 		//Determine operation size
@@ -143,6 +168,15 @@ class Memory {
 		return {
 			type: "stack",
 			baseOffset: this.assembly.stackPointerOffset
+		};
+	}
+
+	allocateArrayBSS(name, dataType) {
+		this.allocateBSS(name, this.getSizeFromDataType(dataType) / 8 * dataType.arraySize.value);
+
+		return {
+			type: "memory",
+			loc: name
 		};
 	}
 }

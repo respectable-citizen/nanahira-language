@@ -1,6 +1,14 @@
 
-uint64 main() {
-	uint8 text[] = "Hello, World!";
+uint8[] numberToString(uint64 number) {
+	uint8[1] test;
+	test[0] = number + 48;
 	
-	return text[1];
+	return test;
+}
+
+uint64 main() {
+	uint32 number = 3;
+	
+	uint8[] string = numberToString(number);
+	return string[0];
 }
