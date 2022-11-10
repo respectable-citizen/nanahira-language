@@ -1,3 +1,4 @@
+const Location = require("./location");
 
 //Manages usage of data segments (data, rodata, bss), stack, heap, and registers
 class Memory {
@@ -27,6 +28,7 @@ class Memory {
 
 	//Returns size in bits of a given data type
 	getSizeFromDataType(dataType) {
+		console.log(dataType)
 		dataType = dataType.identifier.value;
 
 		if (dataType == "uint8" || dataType == "int8") return 8;
@@ -170,11 +172,8 @@ class Memory {
 
 	allocateArrayBSS(name, dataType) {
 		this.allocateBSS(name, this.getSizeFromDataType(dataType) / 8 * dataType.arraySize.value);
-
-		return {
-			type: "memory",
-			loc: name
-		};
+		
+		return new Location("memory", name, dataType);
 	}
 }
 

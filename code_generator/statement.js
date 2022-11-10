@@ -31,7 +31,7 @@ class StatementGenerator {
 
 	generateStatement(statement) {
 		this.assembly.currentStatement = statement;
-		
+
 		if (statement.type == Nodes.VARIABLE_DECLARATION) {
 			this.generateVariableDeclaration(statement);
 		} else if (statement.type == Nodes.RETURN_STATEMENT) {
@@ -58,10 +58,7 @@ class StatementGenerator {
 	generateVariableDeclaration(statement) {
         let identifier = statement.identifier.value;
 
-        if (this.scope.getVariable(identifier)) {
-			Error.error(`Variable "${identifier}" has already been declared`, statement);
-        }
-
+        if (this.scope.getVariable(identifier)) throw new Error.Generator(`Variable "${identifier}" has already been declared`, statement);
         if (!this.scope.getDataType(statement.dataType.identifier.value)) throw new Error.Generator(`Data type "${statement.dataType.identifier.value}" does not exist.`, statement.dataType.identifier.start);
 
 		//Check if variable has been initialized
@@ -80,15 +77,16 @@ class StatementGenerator {
 				dataType: statement.dataType
 			});
 		} else {
+			console.log("no expression")
 			if (statement.dataType.isArray) {
+				console.log("is array")
 				if (!statement.dataType.arraySize) throw new Error.Generator(`Cannot leave array uninitialized without providing array size.`, statement.bracketStart);
-				
+				console.log("no array size")
 				let loc = this.memory.allocateArrayBSS(statement.identifier.value, statement.dataType);
-
+				
 				//Add variable to function scope
 				this.scope.addVariable({
 					name: statement.identifier.value,
-					dataType: statement.dataType,
 					loc
 				});
 			} else {
@@ -101,19 +99,16 @@ class StatementGenerator {
     }
 
 	generateReturnStatement(statement) {
-		console.log(this.scope.getVariable("string"));
     	let loc = this.expression.generateExpression(statement.expression);
 		
 		if (this.assembly.currentFunctionIdentifier == "main") {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
 			this.assembly.addInstruction(`mov rax, 60`);
-			console.log("returning");
-			console.log(loc);
 			this.memory.moveLocationIntoRegister("rdi", loc);
 			this.assembly.addInstruction(`syscall`);
 		} else {
-    		this.memory.moveLocationIntoRegister("rax", loc); //rax is the designated return register
+			this.memory.moveLocationIntoRegister("rax", loc); //rax is the designated return register
 			this.memory.freeRegister(loc);
 		
 			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer

@@ -1,6 +1,7 @@
 const Tokens = require("../lexer/tokens");
 const Nodes = require("../parser/nodes");
 const Error = require("../error");
+const Location = require("./location");
 
 class ExpressionGenerator {
 	constructor(scope, assembly, memory, ast) {
@@ -30,10 +31,7 @@ class ExpressionGenerator {
 			let register = this.memory.allocateRegister();
 			this.assembly.addInstruction(`mov ${register}, ${expression.value.value}`);
 
-			return {
-				type: "register",
-				loc: register
-			};
+			return new Location("register", register, "uint64");
 		} else if (expression.type == Nodes.BINARY_EXPRESSION) {
 			let leftRegister;
 			let rightRegister;
@@ -52,28 +50,19 @@ class ExpressionGenerator {
 
 				this.memory.freeRegister(rightRegister);
 
-				return {
-					type: "register",
-					loc: leftRegister
-				};
+				return new Location("register", leftRegister, "uint64");
 			} else if (expression.operator == Tokens.MINUS) {
 				this.assembly.addInstruction(`sub ${leftRegister}, ${rightRegister}`);
 
 				this.memory.freeRegister(rightRegister);
 
-				return {
-					type: "register",
-					loc: leftRegister
-				};
+				return new Location("register", leftRegister, "uint64");
 			} else if (expression.operator == Tokens.STAR) {
 				this.assembly.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
 
 				this.memory.freeRegister(rightRegister);
 
-				return {
-					type: "register",
-					loc: leftRegister
-				};
+				return new Location("register", leftRegister, "uint64");
 			} else if (expression.operator == Tokens.SLASH) {
 				//Ensure dividend is in RAX
 				if (leftRegister != "rax") {
@@ -86,17 +75,14 @@ class ExpressionGenerator {
 				this.assembly.addInstruction(`div ${rightRegister}`);
 				this.memory.freeRegister(rightRegister);
 
-				return {
-					type: "register",
-					loc: "rax"
-				};
+				return new Location("register", "rax", "uint64");
 			}
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
 		} else if (expression.type == Nodes.VARIABLE) {
-			let variable = this.scope.getVariable(expression.value.value);
+			let variable = this.scope.getVariable(expression.value.value);	
 			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
-
+			
 			let loc = structuredClone(variable.loc);
 			if (expression.arrayIndex) loc.index = expression.arrayIndex.value;
 
@@ -107,10 +93,7 @@ class ExpressionGenerator {
 
 				this.assembly.addInstruction(`neg ${expressionRegister}`);
 
-				return {
-					type: "register",
-					loc: expressionRegister
-				};
+				return new Location("register", expressionRegister, "uint64");
 			}
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
@@ -135,32 +118,30 @@ class ExpressionGenerator {
 		if (!variable) {
 			throw new Error.Generator(`Cannot assign to variable "${statement.identifier.value}" because it does not exist`, statement.identifier.start);
 		}
-
-        if (variable.loc.type == "register") {
-            let expressionValueRegister;
-
-            if (statement.operator.type == Tokens.EQUAL) {
-                expressionValueRegister = this.generateExpression(statement.expression);
-            } else {
-                let expression = {
-                    type: Nodes.BINARY_EXPRESSION,
-                    operator: statement.operator.type.split("_EQUAL").join(""),
-                    left: {
-                        type: Nodes.VARIABLE,
-                        value: {
-                            value: statement.identifier.value
-                        }
-                    },
-                    right: statement.expression                    
-                };
-
-                expressionValueRegister = this.generateExpression(expression);
-            }
-            
-            if (variable.loc.loc != expressionValueRegister) this.assembly.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
         
-            this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
+		let expressionValueRegister;
+
+		if (statement.operator.type == Tokens.EQUAL) {
+			 expressionValueRegister = this.generateExpression(statement.expression);
+		} else {
+			let expression = {
+				type: Nodes.BINARY_EXPRESSION,
+				operator: statement.operator.type.split("_EQUAL").join(""),
+				left: {
+					type: Nodes.VARIABLE,
+					value: {
+					value: statement.identifier.value
+					}
+				},
+				right: statement.expression                    
+			};
+
+        	expressionValueRegister = this.generateExpression(expression);
         }
+            
+        this.assembly.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
+        
+		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
 
 	generateCallExpression(statement) {

@@ -1,6 +1,7 @@
 const Nodes = require("../parser/nodes");
 const Types = require("./types");
 const Error = require("../error");
+const Location = require("./location");
 
 const Scope = require("./scope");
 
@@ -54,10 +55,10 @@ class CodeGenerator {
 			let baseOffset = 16 + (16 * parameterIndex); //Plus 16 to skip old base pointer and return address
 			this.assembly.addInstruction(`mov ${register}, [rbp + ${baseOffset}]`); //Move argument from stack into register
 		
-			this.scope.addVariable(parameter.identifier.value, {
-				type: "register",
-				loc: register
-			}, parameter.dataType.value);
+			this.scope.addVariable({
+				name: parameter.identifier.value,
+				loc: new Location("register" , register, parameter.dataType)
+			});
 		}
 
         this.statement.generateBlock(this.assembly.currentFunction.block);
