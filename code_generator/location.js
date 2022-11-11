@@ -4,19 +4,12 @@ class Location {
 		this.type = type;
 		this.loc = loc;
 		
-		console.log("receiving");
-		console.log(dataType);
-		
 		if (typeof dataType == "string") {
 			this.dataType = {
-				dataType: dataType
+				identifier: {value: dataType}
 			};
 		} else {
-			this.dataType = {
-				dataType: dataType.identifier.value,
-				isArray: dataType.isArray,
-				arrySize: dataType.arraySize ? dataType.arraySize.value : undefined
-			};
+			this.dataType = dataType;
 		}
 	}
 }

@@ -28,7 +28,6 @@ class Memory {
 
 	//Returns size in bits of a given data type
 	getSizeFromDataType(dataType) {
-		console.log(dataType)
 		dataType = dataType.identifier.value;
 
 		if (dataType == "uint8" || dataType == "int8") return 8;
@@ -82,6 +81,14 @@ class Memory {
 		this.moveLocationIntoRegister(register, loc);
 
 		return register
+	}
+
+	moveRegisterIntoLocation(loc, registerLocation) {
+		if (registerLocation.type != "register") throw `Location type is not a register.`;
+
+		loc = this.retrieveFromLocation(loc);
+		
+		this.assembly.addInstruction(`mov ${loc}, ${registerLocation.loc}`);
 	}
 
 	allocateRegister() {

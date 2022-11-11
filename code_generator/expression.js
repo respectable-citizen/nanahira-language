@@ -11,6 +11,17 @@ class ExpressionGenerator {
 		this.ast = ast;
 	}
 
+	//Returns data type of required bit width to fit integer
+	decideNumberDataType(value) {
+		if (value < 0) throw "Function does not currently support negative numbers.";
+		if (value < 2 ** 8) return "uint8";
+		if (value < 2 ** 16) return "uint16";
+		if (value < 2 ** 32) return "uint32";
+		if (value < 2 ** 64) return "uint64";
+
+		throw `No appropriate data type to store integer ${value.toString()}`;
+	}
+
 	generateExpression(expression) {
 		//Some values necessary for generating arrays, string literals are included because they are stored as byte arrays
 		let arrayDataType;
@@ -31,7 +42,7 @@ class ExpressionGenerator {
 			let register = this.memory.allocateRegister();
 			this.assembly.addInstruction(`mov ${register}, ${expression.value.value}`);
 
-			return new Location("register", register, "uint64");
+			return new Location("register", register, this.decideNumberDataType(+expression.value.value));
 		} else if (expression.type == Nodes.BINARY_EXPRESSION) {
 			let leftRegister;
 			let rightRegister;
@@ -119,10 +130,10 @@ class ExpressionGenerator {
 			throw new Error.Generator(`Cannot assign to variable "${statement.identifier.value}" because it does not exist`, statement.identifier.start);
 		}
         
-		let expressionValueRegister;
+		let expressionValueLocation;
 
 		if (statement.operator.type == Tokens.EQUAL) {
-			 expressionValueRegister = this.generateExpression(statement.expression);
+			 expressionValueLocation = this.generateExpression(statement.expression);
 		} else {
 			let expression = {
 				type: Nodes.BINARY_EXPRESSION,
@@ -136,11 +147,10 @@ class ExpressionGenerator {
 				right: statement.expression                    
 			};
 
-        	expressionValueRegister = this.generateExpression(expression);
+        	expressionValueLocation = this.generateExpression(expression);
         }
             
-        this.assembly.addInstruction(`mov ${variable.loc.loc}, ${expressionValueRegister}`);
-        
+     	this.memory.moveRegisterIntoLocation(variable.loc, expressionValueLocation); 
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
 
@@ -171,10 +181,7 @@ class ExpressionGenerator {
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);
 
-		return {
-			type: "register",
-			loc: "rax"
-		}; //rax is the designated return register
+		return new Location("register", "rax", this.ast.getFunctionNode(statement.identifier.value).returnType); //rax is the designated return register
 	}
 
 	generateASMCall(statement) {
