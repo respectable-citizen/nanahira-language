@@ -14,12 +14,13 @@ class StatementGenerator {
 		this.expression = new ExpressionGenerator(this.scope, this.assembly, this.memory, this.ast);
 	}
 	
-	handleError(func, node, context = this) {
+	handleError(func, node, context = this, postErrorHandle = null) {
 		try {
 			func.call(context, node);
 		} catch (e) {
 			if (e.name == "CodeGeneratorError") {
 				Error.error(e.message, node, e.arrow);
+				if (postErrorHandle) postErrorHandle();
 			} else {
 				throw e;
 			}

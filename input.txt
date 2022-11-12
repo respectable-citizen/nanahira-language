@@ -1,4 +1,6 @@
 
+void syscall(uint8 syscall_number, uint8 syscall_argument) {}
+
 uint8[] numberToString(uint8 number) {
 	uint8[1] test;
 	test[0] = number + 48;

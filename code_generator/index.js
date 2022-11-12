@@ -68,7 +68,11 @@ class CodeGenerator {
     run() {
         if (!this.ast.getFunctionNode("main")) throw "Missing main function.";
 
-        for (let func of this.ast.functions) this.statement.handleError(this.generateFunction, func, this);
+        for (let func of this.ast.functions) {
+			this.statement.handleError(this.generateFunction, func, this, () => {
+				this.assembly.finishFunction.call(this.assembly); //If error occurs we must execute finishFunction to prevent scope-related errors
+			});
+		}
 		
 		this.output = this.assembly.output();
     }
