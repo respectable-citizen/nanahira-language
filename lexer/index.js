@@ -285,7 +285,7 @@ class Lexer {
                 if (this.isAlpha(this.peek())) {
                     let identifier = this.get();
                     
-                    while (this.isAlphanumeric(this.peek())) {
+                    while (this.isAlphanumeric(this.peek()) || this.peek() == "_") {
                         identifier += this.get();
                     }
 
