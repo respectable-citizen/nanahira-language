@@ -132,7 +132,7 @@ class Memory {
 			let totalOffset = loc.baseOffset + (loc.index ? loc.index : 0);
 
 			let memoryOffset = "";
-			if (totalOffset) memoryOffset = ` + ${totalOffset}`;
+			if (totalOffset) memoryOffset = (totalOffset > 0) ? ` + ${totalOffset}` : ` - ${-totalOffset}`;
 
 			return `[rbp${memoryOffset}]`;
 		} else {
@@ -262,16 +262,20 @@ class Memory {
 			this.assembly.addInstruction(`mov ${operationSize} [rsp${offset}], ${values[i]}`);
 		}
 
-		return {
-			type: "stack",
-			baseOffset: this.assembly.stackPointerOffset
-		};
+		return new Location.Stack(this.assembly.stackPointerOffset);
 	}
 
 	allocateArrayBSS(name, dataType) {
 		this.allocateBSS(name, this.getSizeFromDataType(dataType) / 8 * dataType.arraySize.value);
 		
 		return new Location("memory", name, dataType);
+	}
+	
+	allocateStackSpace(dataType) {
+		let arraySizeBytes = dataType.arraySize.value * (this.getSizeFromDataType(dataType) / 8);
+		this.assembly.moveStackPointer(-arraySizeBytes);
+		
+		return Location.Stack(this.assembly.stackPointerOffset);
 	}
 }
 

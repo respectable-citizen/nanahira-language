@@ -80,8 +80,8 @@ class StatementGenerator {
 		} else {
 			if (statement.dataType.isArray) {
 				if (!statement.dataType.arraySize) throw new Error.Generator(`Cannot leave array uninitialized without providing array size.`, statement.bracketStart);
-				let loc = this.memory.allocateArrayBSS(statement.identifier.value, statement.dataType);
-				
+				let loc = this.memory.allocateStackSpace(statement.dataType);
+
 				//Add variable to function scope
 				this.scope.addVariable({
 					name: statement.identifier.value,
@@ -106,6 +106,9 @@ class StatementGenerator {
 			this.memory.moveLocationIntoRegister("di", loc);
 			this.assembly.addInstruction(`syscall`);
 		} else {
+			//Clear locals from stack
+			this.assembly.moveStackPointer(-this.assembly.stackPointerOffset);
+
 			this.memory.moveLocationIntoRegister("a", loc);
 			this.memory.freeRegister(loc);
 		

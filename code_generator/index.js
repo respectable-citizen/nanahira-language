@@ -37,7 +37,7 @@ class CodeGenerator {
 		if (this.assembly.currentFunction.returnType.identifier.value != "void") {
 			//TODO: More comprehensive return checking, this does not check for return statements in loops, conditionals, etc
 			let returnStatements = this.assembly.currentFunction.block.filter(statement => statement.type == Nodes.RETURN_STATEMENT);
-			if (returnStatements.length == 0) throw new Error.Generator(`Function "${func.identifier.value}" does not return any value but has non-void return type "${func.returnType.value}"`, this.assembly.currentFunction.returnType.start);
+			if (returnStatements.length == 0) throw new Error.Generator(`Function "${func.identifier.value}" does not return any value but has non-void return type "${func.returnType.identifier.value}"`, this.assembly.currentFunction.returnType.start);
 		}
 
 		//TODO: Check if function tries to return but has void return type

@@ -149,7 +149,7 @@ class ExpressionGenerator {
 
 	generateCallExpression(statement) {
 		if (statement.identifier.value == "asm") return this.generateASMCall(statement);
-		if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
+		//if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
 		for (let argument of statement.args) {
 			let argumentLocation;

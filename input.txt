@@ -1,5 +1,9 @@
 
-void syscall(uint8 syscall_number, uint8 syscall_argument) {}
+void syscall(uint8 syscall_number, uint8 syscall_argument) {
+	asm("mov rax, r8");
+	asm("mov rdi, r9");
+	asm("syscall");
+}
 
 uint8[] numberToString(uint8 number) {
 	uint8[1] test;
@@ -12,5 +16,6 @@ uint64 main() {
 	uint32 number = 3;
 	
 	uint8[] string = numberToString(number);
+	syscall(60, string[0]);
 	return string[0];
 }
