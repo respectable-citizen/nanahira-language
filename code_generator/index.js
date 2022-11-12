@@ -32,10 +32,9 @@ class CodeGenerator {
 		this.assembly.startFunction(func.identifier.value);
 
 		if (func.identifier.value == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
-		if (func.identifier.value == "syscall") throw new Error.Generator(`Function name "syscall" is reserved`, func.identifier.start);
 
 		//Check if function should be returning something
-		if (this.assembly.currentFunction.returnType.value != "void") {
+		if (this.assembly.currentFunction.returnType.identifier.value != "void") {
 			//TODO: More comprehensive return checking, this does not check for return statements in loops, conditionals, etc
 			let returnStatements = this.assembly.currentFunction.block.filter(statement => statement.type == Nodes.RETURN_STATEMENT);
 			if (returnStatements.length == 0) throw new Error.Generator(`Function "${func.identifier.value}" does not return any value but has non-void return type "${func.returnType.value}"`, this.assembly.currentFunction.returnType.start);
