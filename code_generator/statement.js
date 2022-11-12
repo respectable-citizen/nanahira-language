@@ -1,5 +1,6 @@
 const Nodes = require("../parser/nodes");
 const Error = require("../error");
+const Location = require("./location");
 
 const ExpressionGenerator = require("./expression");
 
@@ -101,10 +102,10 @@ class StatementGenerator {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
 			this.assembly.addInstruction(`mov rax, 60`);
-			this.memory.moveLocationIntoRegister("rdi", loc);
+			this.memory.moveLocationIntoRegister("di", loc);
 			this.assembly.addInstruction(`syscall`);
 		} else {
-			this.memory.moveLocationIntoRegister("rax", loc); //rax is the designated return register
+			this.memory.moveLocationIntoRegister("a", loc);
 			this.memory.freeRegister(loc);
 		
 			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer

@@ -7,25 +7,79 @@ class Memory {
 		this.assembly = assembly;
 
         this.registers = {
-            //"rax": true,  Reserved for div instruction and returning up to 64 bits from functions
-            "rbx": true,
-            "rcx": true,
-            //"rdx": true,  Reserved for div instruction
-            //"rbp": true,  Reserved for stack
-            //"rsp": true,  Reserved for stack
-            "rsi": true,
-            "rdi": true,
-            "r8":  true,
-            "r9":  true,
-            "r10":  true,
-            "r11":  true,
-            "r12":  true,
-            "r13":  true,
-            "r14":  true,
-            "r15":  true,
+            //"a": true,  Reserved for div instruction and returning up to 64 bits from functions
+            "b": true,
+            "c": true,
+            //"d": true,  Reserved for div instruction
+            //"bp": true,  Reserved for stack
+            //"sp": true,  Reserved for stack
+            "si": true,
+            "di": true,
+            "8":  true,
+            "9":  true,
+            "10":  true,
+            "11":  true,
+            "12":  true,
+            "13":  true,
+            "14":  true,
+            "15":  true,
         };
 	}
-	
+
+	//Returns data type of required bit width to fit integer
+	decideIntegerDataType(value) {
+		if (value < 0) throw "Function does not currently support negative numbers.";
+		if (value < 2 ** 8) return "uint8";
+		if (value < 2 ** 16) return "uint16";
+		if (value < 2 ** 32) return "uint32";
+		if (value < 2 ** 64) return "uint64";
+
+		throw `No appropriate data type to store integer ${value.toString()}`;
+	}
+
+	//Converts location containing register and data type to register name
+	//Example: register di and 8-bit data type -> dil
+	locationToRegisterName(loc) {
+		if (loc.type != "register") throw "Location type is not register.";
+
+		let dataTypeSizeBits = this.getSizeFromDataType(loc.dataType);
+		if (dataTypeSizeBits != 8 && dataTypeSizeBits != 16 && dataTypeSizeBits != 32 && dataTypeSizeBits != 64) throw "Data type can not fit exactly in a register.";
+
+		if (loc.loc == "a" || loc.loc == "b" || loc.loc == "c" || loc.loc == "d") {
+			if (dataTypeSizeBits == 8) {
+				return loc.loc + "l";
+			} else if (dataTypeSizeBits == 16) {
+				return loc.loc + "x";
+			} else if (dataTypeSizeBits == 32) {
+				return "e" + loc.loc + "x";
+			} else if (dataTypeSizeBits == 64) {
+				return "r" + loc.loc + "x";
+			}
+		} else if (loc.loc == "si" || loc.loc == "di" || loc.loc == "bp" || loc.loc == "sp") {	//Returns data type of required bit width to fit integer
+			if (dataTypeSizeBits == 8) {
+				return loc.loc + "l";
+			} else if (dataTypeSizeBits == 16) {
+				return loc.loc;
+			} else if (dataTypeSizeBits == 32) {
+				return "e" + loc.loc;
+			} else if (dataTypeSizeBits == 64) {
+				return "r" + loc.loc;
+			}
+		} else {
+			if (dataTypeSizeBits == 8) {
+				return "r" + loc.loc + "b";
+			} else if (dataTypeSizeBits == 16) {
+				return "r" + loc.loc + "w";
+			} else if (dataTypeSizeBits == 32) {
+				return "r" + loc.loc + "d";
+			} else if (dataTypeSizeBits == 64) {
+				return "r" + loc.loc;	
+			}
+		}
+
+		throw "Could not convert location to register name.";
+	}
+
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
@@ -58,7 +112,7 @@ class Memory {
 		throw `Cannot determine size of data type "${dataType}"`;
 	}
 
-	//Generates corresponding assembly code that retrieves data from its location (registers/memory/stack)
+	//Generates corresponding assembly code that represents the location of some data (registers/memory/stack)
 	retrieveFromLocation(loc) {
 		if (loc.type == "register") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
@@ -66,7 +120,7 @@ class Memory {
 			let memoryOffset = "";
 			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
 
-			return `[${loc.loc}${memoryOffset}]`;
+			return `${this.locationToRegisterName(loc)}${memoryOffset}`;
 		} else if (loc.type == "memory") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
@@ -75,8 +129,10 @@ class Memory {
 
 			return `[${loc.loc}${memoryOffset}]`;
 		} else if (loc.type == "stack") {
+			let totalOffset = loc.baseOffset + (loc.index ? loc.index : 0);
+
 			let memoryOffset = "";
-			if (loc.baseOffset) memoryOffset = ` - ${Math.abs(loc.baseOffset + loc.index)}`;
+			if (totalOffset) memoryOffset = ` + ${totalOffset}`;
 
 			return `[rbp${memoryOffset}]`;
 		} else {
@@ -84,31 +140,46 @@ class Memory {
 		}
 	}
 
-	//Moves location into a specific register
-	moveLocationIntoRegister(register, loc, dereference = false) {
-		loc = this.retrieveFromLocation(loc);
-		
-		if (loc.index !== null) dereference = true; //If we are using an array index, we want the value not the address
-
-		this.assembly.addInstruction(`${dereference ? "mov" : "lea"} ${register}, ${loc}`);
-	}
-
-	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen
-	moveLocationIntoARegister(loc) {
-		if (loc.type == "register") return loc.loc;
-
-		let register = this.allocateRegister();
-		this.moveLocationIntoRegister(register, loc);
-
-		return register
-	}
-
+	/*
 	moveRegisterIntoLocation(loc, registerLocation) {
 		if (registerLocation.type != "register") throw `Location type is not a register.`;
 
 		loc = this.retrieveFromLocation(loc);
 		
 		this.assembly.addInstruction(`mov ${loc}, ${registerLocation.loc}`);
+	}
+	*/
+
+	//Performs move on locations, not limited to just registers (stack, memory, etc)
+	locationMove(destinationLocation, sourceLocation) {
+		let destinationName = this.retrieveFromLocation(destinationLocation);
+		let sourceName = this.retrieveFromLocation(sourceLocation);
+	
+		this.assembly.addInstruction(`mov ${destinationName}, ${sourceName}`);
+	}
+	
+	//Moves location into a specific register
+	moveLocationIntoRegister(destinationRegister, sourceLocation) {
+		let destinationRegisterLocation = new Location("register", destinationRegister, sourceLocation.dataType);
+
+		this.locationMove(destinationRegisterLocation, sourceLocation);
+	}
+	
+	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen
+	moveLocationIntoARegister(loc) {
+		if (loc.type == "register") return loc;
+
+		let registerLocation = new Location("register", this.allocateRegister(), loc.dataType);
+		this.locationMove(registerLocation, loc);
+		
+		return registerLocation;
+	}
+
+	moveIntegerIntoARegister(integer) {
+		let registerLocation = new Location("register", this.allocateRegister(), this.decideIntegerDataType(integer));
+		this.assembly.addInstruction(`mov ${this.retrieveFromLocation(registerLocation)}, ${integer.toString()}`);
+
+		return registerLocation;
 	}
 
 	allocateRegister() {

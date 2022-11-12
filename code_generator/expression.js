@@ -11,17 +11,6 @@ class ExpressionGenerator {
 		this.ast = ast;
 	}
 
-	//Returns data type of required bit width to fit integer
-	decideNumberDataType(value) {
-		if (value < 0) throw "Function does not currently support negative numbers.";
-		if (value < 2 ** 8) return "uint8";
-		if (value < 2 ** 16) return "uint16";
-		if (value < 2 ** 32) return "uint32";
-		if (value < 2 ** 64) return "uint64";
-
-		throw `No appropriate data type to store integer ${value.toString()}`;
-	}
-
 	generateExpression(expression) {
 		//Some values necessary for generating arrays, string literals are included because they are stored as byte arrays
 		let arrayDataType;
@@ -39,41 +28,42 @@ class ExpressionGenerator {
 		}
 
 		if (expression.type == Nodes.INTEGER_LITERAL) {
-			let register = this.memory.allocateRegister();
-			this.assembly.addInstruction(`mov ${register}, ${expression.value.value}`);
-
-			return new Location("register", register, this.decideNumberDataType(+expression.value.value));
+			let loc = this.memory.moveIntegerIntoARegister(+expression.value.value);
+			return loc;
 		} else if (expression.type == Nodes.BINARY_EXPRESSION) {
-			let leftRegister;
-			let rightRegister;
+			let leftLocation;
+			let rightLocation;
 
 			//Evaluate binary expressions first, as to not waste registers by loading in unused values
 			if (expression.left.type == Nodes.BINARY_EXPRESSION) {
-				leftRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.left));
-				rightRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
+				leftLocation = this.memory.moveLocationIntoARegister(this.generateExpression(expression.left));
+				rightLocation = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
 			} else {
-				rightRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
-				leftRegister = this.memory.moveLocationIntoARegister(this.generateExpression(expression.left));
+				leftLocation = this.memory.moveLocationIntoARegister(this.generateExpression(expression.left));
+				rightLocation = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
 			}
+			
+			let leftRegister = this.memory.retrieveFromLocation(leftLocation);
+			let rightRegister = this.memory.retrieveFromLocation(rightLocation);
 
 			if (expression.operator == Tokens.PLUS) {
 				this.assembly.addInstruction(`add ${leftRegister}, ${rightRegister}`);
 
 				this.memory.freeRegister(rightRegister);
 
-				return new Location("register", leftRegister, "uint64");
+				return new Location("register", leftLocation.loc, "uint64");
 			} else if (expression.operator == Tokens.MINUS) {
 				this.assembly.addInstruction(`sub ${leftRegister}, ${rightRegister}`);
 
 				this.memory.freeRegister(rightRegister);
 
-				return new Location("register", leftRegister, "uint64");
+				return new Location("register", leftLocation.loc, "uint64");
 			} else if (expression.operator == Tokens.STAR) {
 				this.assembly.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
 
 				this.memory.freeRegister(rightRegister);
 
-				return new Location("register", leftRegister, "uint64");
+				return new Location("register", leftLocation.loc, "uint64");
 			} else if (expression.operator == Tokens.SLASH) {
 				//Ensure dividend is in RAX
 				if (leftRegister != "rax") {
@@ -86,7 +76,7 @@ class ExpressionGenerator {
 				this.assembly.addInstruction(`div ${rightRegister}`);
 				this.memory.freeRegister(rightRegister);
 
-				return new Location("register", "rax", "uint64");
+				return new Location("register", "a", "uint64");
 			}
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
@@ -149,14 +139,11 @@ class ExpressionGenerator {
 
         	expressionValueLocation = this.generateExpression(expression);
         }
-    	
-		console.log(expressionValueLocation.dataType);
+		
 		let canImplicitlyTypecast = this.memory.implicitlyTypecast(variable.loc.dataType, expressionValueLocation.dataType);
 		if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${expressionValueLocation.dataType.identifier.value}" to variable of type "${variable.loc.dataType.identifier.value}"`, statement.expression.start);
     
-		console.log(expressionValueLocation.dataType);
-		this.memory.moveRegisterIntoLocation(variable.loc, expressionValueLocation); 
-		console.log(expressionValueLocation.dataType);
+		this.memory.locationMove(variable.loc, expressionValueLocation);
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
 
@@ -165,29 +152,32 @@ class ExpressionGenerator {
 		if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
 		for (let argument of statement.args) {
+			let argumentLocation;
+
 			if (argument.type == Nodes.VARIABLE) {
 				let variable = this.scope.getVariable(argument.value.value);
 				if (!variable) throw new Error.Generator(`Cannot use variable "${argument.value.value}" as an argument because it does not exist`, argument.value.start);
 
 				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
 			
-				this.assembly.addInstruction(`push ${variable.loc.loc}`);
+				argumentLocation = variable.loc;
 			} else if (argument.type == Nodes.CALL_EXPRESSION) {
-				let register = this.generateCallExpression(argument);
-
-				this.assembly.addInstruction(`push ${register}`);
+				argumentLocation = this.generateCallExpression(argument);
 			} else if (argument.type == Nodes.INTEGER_LITERAL) {
-				let register = this.generateExpression(argument);
-
-				this.assembly.addInstruction(`push ${register}`);
+				argumentLocation = this.generateExpression(argument);
 			} else {
 				throw `Cannot use ${argument.type} as function argument`;
 			}
+			
+			//All arguments are passed as 64-bit numbers, change the data type
+			argumentLocation.dataType.identifier.value = "uint64";
+
+			this.assembly.addInstruction(`push ${this.memory.retrieveFromLocation(argumentLocation)}`);
 		}
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);
 
-		return new Location("register", "rax", this.ast.getFunctionNode(statement.identifier.value).returnType); //rax is the designated return register
+		return new Location("register", "a", this.ast.getFunctionNode(statement.identifier.value).returnType); //rax is the designated return register
 	}
 
 	generateASMCall(statement) {

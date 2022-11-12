@@ -50,14 +50,14 @@ class CodeGenerator {
 		for (let parameterIndex = this.assembly.currentFunction.parameters.length - 1; parameterIndex >= 0; parameterIndex--) {
 			let parameter = this.assembly.currentFunction.parameters[parameterIndex];
 
-			let register = this.memory.allocateRegister();
-
 			let baseOffset = 16 + (16 * parameterIndex); //Plus 16 to skip old base pointer and return address
-			this.assembly.addInstruction(`mov ${register}, [rbp + ${baseOffset}]`); //Move argument from stack into register
-		
+			let argumentStackLocation = Location.Stack(baseOffset);
+			let argumentLocation = this.memory.moveLocationIntoARegister(argumentStackLocation); //Move argument from stack into a register
+			argumentLocation.dataType = parameter.dataType;
+
 			this.scope.addVariable({
 				name: parameter.identifier.value,
-				loc: new Location("register" , register, parameter.dataType)
+				loc: argumentLocation
 			});
 		}
 
