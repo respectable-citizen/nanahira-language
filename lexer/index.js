@@ -291,12 +291,16 @@ class Lexer {
 
                     //If this matches any keywords insert a keyword, otherwise insert it as an identifier
                     if (identifier == "return") {
-                         this.addToken({
+                    	this.addToken({
                             type: Tokens.KEYWORD_RETURN
                         });
                     } else if (identifier == "if") {
-                         this.addToken({
+                        this.addToken({
                             type: Tokens.KEYWORD_IF
+                        });
+					} else if (identifier == "while") {
+						 this.addToken({
+                            type: Tokens.KEYWORD_WHILE
                         });
 					} else {
                         this.addToken({

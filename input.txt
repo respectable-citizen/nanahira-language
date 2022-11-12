@@ -14,7 +14,7 @@ uint8[] numberToString(uint8 number) {
 
 uint64 main() {
 	uint32 number = 3;
-	
+	while (1) {}	
 	uint8[] string = numberToString(number);
 	syscall(60, string[0]);
 	return string[0];

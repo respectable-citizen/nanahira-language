@@ -37,11 +37,12 @@ variableDeclaration := dataType assignmentExpression ";" //Same as assignmentExp
 dataType = IDENTIFIER [ "[" "]" ]
 
 //Statements
-statement := expressionStatement | returnStatement | ifStatement
+statement := expressionStatement | returnStatement | ifStatement | whileStatement
 
 expressionStatement := (assignmentExpression | callExpression) ";"
 returnStatement := "return" expression ";"
 ifStatement := if "(" expression ")" block
+whileStatement = while "(" expression ")" block
 
 */
 
@@ -144,7 +145,7 @@ class Parser {
 		//Skip pairs of array brackets
 		let offset = 1;
     	while (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.RIGHT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.INTEGER_LITERAL) offset++;
-
+		
 		if (this.peekOffset(offset).type != Tokens.IDENTIFIER) return Nodes.NONE;
 
 		if (this.peekOffset(offset + 1).type == Tokens.LEFT_PAREN) return Nodes.FUNCTION_DECLARATION;
@@ -228,8 +229,9 @@ class Parser {
 		
 		let statement;
         if (this.peek().type == Tokens.KEYWORD_RETURN) statement = this.parseReturnStatement();
-        if (this.peek().type == Tokens.KEYWORD_IF) statement = this.parseIfStatement();
-        if (this.peek().type == Tokens.IDENTIFIER) statement = this.parseExpressionStatement();
+		else if (this.peek().type == Tokens.KEYWORD_IF) statement = this.parseIfStatement();
+		else if (this.peek().type == Tokens.KEYWORD_WHILE) statement = this.parseWhileStatement();
+		else if (this.peek().type == Tokens.IDENTIFIER) statement = this.parseExpressionStatement();
 		if (!statement) this.unexpectedToken();
 		
 		let end = this.previous().end;
@@ -293,6 +295,23 @@ class Parser {
 			block
 		};
 	}
+	
+	parseWhileStatement() {
+		this.expect(Tokens.KEYWORD_WHILE);
+		this.expect(Tokens.LEFT_PAREN);
+
+		let expression = this.parseExpression();
+
+		this.expect(Tokens.RIGHT_PAREN);
+
+		let block = this.parseBlock();
+
+		return {
+			type: Nodes.WHILE_STATEMENT,
+			expression,
+			block
+		};
+	}
 
     parseBlock() {
         this.expect(Tokens.LEFT_CURLY_BRACE);
@@ -302,7 +321,7 @@ class Parser {
             //Parse variable declaration
             let declarationType = this.determineDeclarationType();
             
-            if (declarationType == Nodes.VARIABLE_DECLARATION) {
+			if (declarationType == Nodes.VARIABLE_DECLARATION) {
                 lines.push(this.parseVariableDeclaration());
             } else {
                 //Parse statement

@@ -23,5 +23,6 @@ module.exports = {
 
     //Keywords
     KEYWORD_RETURN: "KEYWORD_RETURN",
-    KEYWORD_IF: "KEYWORD_IF"
+    KEYWORD_IF: "KEYWORD_IF",
+    KEYWORD_WHILE: "KEYWORD_WHILE"
 };

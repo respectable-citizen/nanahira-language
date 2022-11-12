@@ -43,6 +43,8 @@ class StatementGenerator {
 			this.generateExpressionStatement(statement);
 		} else if (statement.type == Nodes.IF_STATEMENT) {
 			this.generateIfStatement(statement);
+		} else if (statement.type == Nodes.WHILE_STATEMENT) {
+			this.generateWhileStatement(statement);
 		} else {
 			throw `Cannot generate statement of type ${statement.type}`;
 		}
@@ -126,9 +128,26 @@ class StatementGenerator {
 		let skipLabel = this.assembly.generateLabel();
 
 		let register = this.memory.moveLocationIntoARegister(loc);
-		this.assembly.addInstruction(`cmp ${register}, 1`);
+		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
 		this.assembly.addInstruction(`jne ${skipLabel}`);
 		this.generateBlock(statement.block);
+		this.assembly.addInstruction(`${skipLabel}:`);
+	}
+
+	generateWhileStatement(statement) {
+		let loopLabel = this.assembly.generateLabel();
+		let skipLabel = this.assembly.generateLabel();
+
+		this.assembly.addInstruction(`${loopLabel}:`);
+		let loc = this.expression.generateExpression(statement.expression);
+
+		let register = this.memory.moveLocationIntoARegister(loc);
+		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
+		this.assembly.addInstruction(`jne ${skipLabel}`);
+
+		this.generateBlock(statement.block);
+
+		this.assembly.addInstruction(`jmp ${loopLabel}`);
 		this.assembly.addInstruction(`${skipLabel}:`);
 	}
 }
