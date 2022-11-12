@@ -129,6 +129,7 @@ class StatementGenerator {
 
 		let register = this.memory.moveLocationIntoARegister(loc);
 		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
+		this.memory.freeRegister(register);
 		this.assembly.addInstruction(`jne ${skipLabel}`);
 		this.generateBlock(statement.block);
 		this.assembly.addInstruction(`${skipLabel}:`);
@@ -143,6 +144,7 @@ class StatementGenerator {
 
 		let register = this.memory.moveLocationIntoARegister(loc);
 		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
+		this.memory.freeRegister(register);
 		this.assembly.addInstruction(`jne ${skipLabel}`);
 
 		this.generateBlock(statement.block);
