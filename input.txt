@@ -1,5 +1,5 @@
 
-uint8[] numberToString(uint64 number) {
+uint8[] numberToString(uint8 number) {
 	uint8[1] test;
 	test[0] = number + 48;
 	

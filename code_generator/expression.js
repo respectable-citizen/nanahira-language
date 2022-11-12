@@ -129,7 +129,7 @@ class ExpressionGenerator {
 		if (!variable) {
 			throw new Error.Generator(`Cannot assign to variable "${statement.identifier.value}" because it does not exist`, statement.identifier.start);
 		}
-        
+
 		let expressionValueLocation;
 
 		if (statement.operator.type == Tokens.EQUAL) {
@@ -149,8 +149,14 @@ class ExpressionGenerator {
 
         	expressionValueLocation = this.generateExpression(expression);
         }
-            
-     	this.memory.moveRegisterIntoLocation(variable.loc, expressionValueLocation); 
+    	
+		console.log(expressionValueLocation.dataType);
+		let canImplicitlyTypecast = this.memory.implicitlyTypecast(variable.loc.dataType, expressionValueLocation.dataType);
+		if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${expressionValueLocation.dataType.identifier.value}" to variable of type "${variable.loc.dataType.identifier.value}"`, statement.expression.start);
+    
+		console.log(expressionValueLocation.dataType);
+		this.memory.moveRegisterIntoLocation(variable.loc, expressionValueLocation); 
+		console.log(expressionValueLocation.dataType);
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
 

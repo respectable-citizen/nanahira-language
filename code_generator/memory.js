@@ -25,6 +25,26 @@ class Memory {
             "r15":  true,
         };
 	}
+	
+	//If types can be implicitly casted, currentDataType will be changed and function will return true
+	//Otherwise returns false
+	implicitlyTypecast(requiredDataType, currentDataType) {
+		if (requiredDataType.identifier.value == currentDataType.identifier.value) return true; //Types are already the same, no need to cast
+
+		//Expression data type and variable data type do not match, can we implicitly typecast?
+		if (requiredDataType.identifier.value.startsWith("uint") && currentDataType.identifier.value.startsWith("uint")) {
+			//Integer typecasting
+			let requiredBitSize = this.getSizeFromDataType(requiredDataType);
+			let currentBitSize = this.getSizeFromDataType(currentDataType);
+				
+			//if (requiredBitSize >= currentBitSize) return true;
+			
+			currentDataType.identifier.value = requiredDataType.identifier.value;
+			return true;
+		}
+
+		return false;
+	}
 
 	//Returns size in bits of a given data type
 	getSizeFromDataType(dataType) {

@@ -67,21 +67,10 @@ class StatementGenerator {
         	//Generate code to evaluate expression
         	let loc = this.expression.generateExpression(statement.expression);
 			
-			if (statement.dataType.identifier.value != loc.dataType.identifier.value) {
-				//Expression data type and variable data type do not match, can we implicitly typecast?
-				let canImplicitlyTypecast = false;
-				if (statement.dataType.identifier.value.startsWith("uint") && loc.dataType.identifier.value.startsWith("uint")) {
-					//Integer typecasting
-					let statementBitSize = this.memory.getSizeFromDataType(statement.dataType);
-					let expressionBitSize = this.memory.getSizeFromDataType(loc.dataType);
-				
-					if (statementBitSize >= expressionBitSize) canImplicitlyTypecast = true;
-				}
-
-				if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${loc.dataType.identifier.value}" to variable of type "${statement.dataType.identifier.value}"`, statement.expression.start);
-			}
-
-        	//Add variable to function scope
+			let canImplicitlyTypecast = this.memory.implicitlyTypecast(statement.dataType, loc.dataType);
+			if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${loc.dataType.identifier.value}" to variable of type "${statement.dataType.identifier.value}"`, statement.expression.start);
+			
+			//Add variable to function scope
 	        this.scope.addVariable({
 				name: identifier,
 				loc
