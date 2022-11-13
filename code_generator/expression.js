@@ -160,7 +160,20 @@ class ExpressionGenerator {
 		let canImplicitlyTypecast = this.memory.implicitlyTypecast(variable.loc.dataType, expressionValueLocation.dataType);
 		if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${expressionValueLocation.dataType.identifier.value}" to variable of type "${variable.loc.dataType.identifier.value}"`, statement.expression.start);
     	
-		if (statement.index) variable.loc.index = statement.index.value; //Handle array indexing, operating on clone (made at start of function) of variable location so we don't modify the original
+		if (statement.index) {
+			//Handle array indexing, operating on clone (made at start of function) of variable location so we don't modify the original
+			if (statement.index.type == Nodes.INTEGER_LITERAL) {
+				variable.loc.index = statement.index.value.value;
+			} else {
+				//Index is an expression, must generate it before setting index
+				let indexLocation = this.generateExpression(statement.index);
+				let displacementRegister = this.memory.moveLocationIntoRegister("b", indexLocation);
+				displacementRegister.dataType.identifier.value = "uint64"; //Effective addressing requires us to have the same register size for base and displacement
+				this.memory.freeRegister(indexLocation);
+				variable.loc.index = displacementRegister;
+			}
+		}
+
 		this.memory.locationMove(variable.loc, expressionValueLocation);
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }

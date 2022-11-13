@@ -8,7 +8,7 @@ class Memory {
 
         this.registers = {
             //"a": true,  Reserved for div instruction and returning up to 64 bits from functions
-            "b": true,
+            //"b": true,  Reserved for effective addressing
             "c": true,
             //"d": true,  Reserved for div instruction
             //"bp": true,  Reserved for stack
@@ -129,10 +129,15 @@ class Memory {
 
 			return `[${loc.loc}${memoryOffset}]`;
 		} else if (loc.type == "stack") {
-			let totalOffset = loc.baseOffset + (loc.index ? loc.index : 0);
-
 			let memoryOffset = "";
-			if (totalOffset) memoryOffset = (totalOffset > 0) ? ` + ${totalOffset}` : ` - ${-totalOffset}`;
+			if (typeof loc.index == "object") {
+				//Index is a location instead of a simple integer so we have to handle it differently
+				memoryOffset = (loc.baseOffset > 0) ? ` + ${loc.baseOffset}` : ` - ${-loc.baseOffset}`;
+				memoryOffset += ` + ${this.retrieveFromLocation(loc.index)}`;
+			} else {
+				let totalOffset = loc.baseOffset + (loc.index ? loc.index : 0);
+				if (totalOffset) memoryOffset = (totalOffset > 0) ? ` + ${totalOffset}` : ` - ${-totalOffset}`;
+			}
 
 			return `[rbp${memoryOffset}]`;
 		} else {
@@ -169,6 +174,8 @@ class Memory {
 		let destinationRegisterLocation = new Location("register", destinationRegister, sourceLocation.dataType);
 
 		this.locationMove(destinationRegisterLocation, sourceLocation);
+
+		return destinationRegisterLocation;
 	}
 	
 	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen unless force is true

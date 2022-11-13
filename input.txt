@@ -1,19 +1,16 @@
 
 uint8[] numberToString(uint8 number) {
 	uint8[2] digits;
-	digits[0] = 97;
-	digits[1] = 98;
-	return digits;
 
 	uint8 digitIndex = 0;
 	while (number > 0) {
 		uint8 digit = number % 10;
-		digits[digitIndex] = digit;
+		digits[digitIndex] = 51;
 		number = number / 10;
-
+		
 		digitIndex = digitIndex + 1;
 	}	
-
+	
 	return digits;
 }
 

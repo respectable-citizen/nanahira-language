@@ -144,7 +144,9 @@ class Parser {
        
 		//Skip pairs of array brackets
 		let offset = 1;
-    	while (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.RIGHT_SQUARE_BRACE || this.peekOffset(offset + 1).type == Tokens.RIGHT_SQUARE_BRACE) offset++;
+    	if (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE) {
+			while (this.peekOffset(offset++).type != Tokens.RIGHT_SQUARE_BRACE);
+		}
 		
 		if (this.peekOffset(offset).type != Tokens.IDENTIFIER) return Nodes.NONE;
 
@@ -368,7 +370,7 @@ class Parser {
 			bracketStart = this.previous().start; //Used for showing error when array size is missing
 
 			array = true;
-			if (this.match([Tokens.INTEGER_LITERAL, Tokens.IDENTIFIER])) index = this.previous();
+			index = this.parseExpression();
 
 			this.expect(Tokens.RIGHT_SQUARE_BRACE);
 		}
