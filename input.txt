@@ -1,21 +1,33 @@
 
-void syscall(uint8 syscall_number, uint8 syscall_argument) {
-	asm("mov rax, r8");
-	asm("mov rdi, r9");
-	asm("syscall");
-}
-
 uint8[] numberToString(uint8 number) {
-	uint8[1] test;
-	test[0] = number + 48;
-	
-	return test;
+	uint8[2] digits;
+	digits[0] = 97;
+	digits[1] = 98;
+	return digits;
+
+	uint8 digitIndex = 0;
+	while (number > 0) {
+		uint8 digit = number % 10;
+		digits[digitIndex] = digit;
+		number = number / 10;
+
+		digitIndex = digitIndex + 1;
+	}	
+
+	return digits;
 }
 
-uint64 main() {
-	uint32 number = 3;
-	while (1) {}	
+uint8 main() {
+	uint32 number = 37;
+	
 	uint8[] string = numberToString(number);
-	syscall(60, string[0]);
-	return string[0];
+	
+	asm("push rax");
+	asm("mov rax, 1");
+	asm("mov rdi, 1");
+	asm("pop rsi");
+	asm("mov rdx, 2");
+	asm("syscall");
+
+	return 0;
 }

@@ -212,7 +212,12 @@ class Lexer {
                         type: Tokens.BANG
                     });
                 }
-            } else if (this.peek() == "=") {
+			} else if (this.peek() == "%") {
+                this.advance();
+		        this.addToken({
+					type: Tokens.PERCENT
+                });
+			} else if (this.peek() == "=") {
                 this.advance();
                 if (this.peek() == "=") {
                     this.advance();

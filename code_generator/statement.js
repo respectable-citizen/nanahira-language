@@ -125,7 +125,7 @@ class StatementGenerator {
 		let loc = this.expression.generateExpression(statement.expression);
 	
 		//Label that if jumped to, will skip the if block
-		let skipLabel = this.assembly.generateLabel();
+		let skipLabel = "if_skip_" + this.assembly.generateLabel();
 
 		let register = this.memory.moveLocationIntoARegister(loc);
 		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
@@ -136,8 +136,8 @@ class StatementGenerator {
 	}
 
 	generateWhileStatement(statement) {
-		let loopLabel = this.assembly.generateLabel();
-		let skipLabel = this.assembly.generateLabel();
+		let loopLabel = "while_loop_" + this.assembly.generateLabel();
+		let skipLabel = "while_skip_" + this.assembly.generateLabel();
 
 		this.assembly.addInstruction(`${loopLabel}:`);
 		let loc = this.expression.generateExpression(statement.expression);

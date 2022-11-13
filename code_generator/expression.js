@@ -49,34 +49,48 @@ class ExpressionGenerator {
 			if (expression.operator == Tokens.PLUS) {
 				this.assembly.addInstruction(`add ${leftRegister}, ${rightRegister}`);
 
-				this.memory.freeRegister(rightRegister);
-
+				this.memory.freeRegister(rightLocation);
+				
 				return new Location("register", leftLocation.loc, "uint64");
 			} else if (expression.operator == Tokens.MINUS) {
 				this.assembly.addInstruction(`sub ${leftRegister}, ${rightRegister}`);
-
-				this.memory.freeRegister(rightRegister);
+				
+				this.memory.freeRegister(rightLocation);
 
 				return new Location("register", leftLocation.loc, "uint64");
 			} else if (expression.operator == Tokens.STAR) {
 				this.assembly.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
 
-				this.memory.freeRegister(rightRegister);
+				this.memory.freeRegister(rightLocation);
 
 				return new Location("register", leftLocation.loc, "uint64");
-			} else if (expression.operator == Tokens.SLASH) {
+			} else if (expression.operator == Tokens.SLASH || expression.operator == Tokens.PERCENT) {
 				//Ensure dividend is in RAX
 				if (leftRegister != "rax") {
-					this.assembly.addInstruction(`mov rax, ${leftRegister}`);
-					this.memory.freeRegister(leftRegister);
+					this.memory.moveLocationIntoRegister("a", leftLocation);
+					this.memory.freeRegister(leftLocation);
 				}
 				//Ensure RDX is 0 as it forms the high-half of the dividend
 				this.assembly.addInstruction(`mov rdx, 0`);
 
 				this.assembly.addInstruction(`div ${rightRegister}`);
-				this.memory.freeRegister(rightRegister);
+				this.memory.freeRegister(rightLocation);
 
-				return new Location("register", "a", "uint64");
+				return new Location("register", (expression.operator == Tokens.SLASH) ? "a" : "d", "uint64");
+			} else if (expression.operator == Tokens.GREATER) {
+				let resultRegister = this.memory.moveIntegerIntoARegister(0);
+				
+				this.assembly.addInstruction(`cmp ${leftRegister}, ${rightRegister}`);
+
+				let skipLabel = "greater_skip_" + this.assembly.generateLabel();
+				this.assembly.addInstruction(`jle ${skipLabel}`);
+				this.assembly.addInstruction(`mov ${this.memory.retrieveFromLocation(resultRegister)}, 1`);
+				this.assembly.addInstruction(`${skipLabel}:`);
+
+				this.memory.freeRegister(leftLocation);
+				this.memory.freeRegister(rightLocation);
+
+				return new Location("register", resultRegister.loc, "uint8");
 			}
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
@@ -87,7 +101,10 @@ class ExpressionGenerator {
 			let loc = structuredClone(variable.loc);
 			if (expression.arrayIndex) loc.index = expression.arrayIndex.value;
 
-			return loc;
+			//Move value into a register so that the original variable doesn't get freed later on, this is a waste of a register. TODO
+			let newLocation = this.memory.moveLocationIntoARegister(loc, true);
+
+			return newLocation;
 		} else if (expression.type == Nodes.UNARY_EXPRESSION) {
 			if (expression.operator == Tokens.MINUS) {
 				let expressionRegister = this.generateExpression(expression.expression);
@@ -115,7 +132,7 @@ class ExpressionGenerator {
 	}
 
     generateAssignmentExpression(statement) {
-        let variable = this.scope.getVariable(statement.identifier.value);
+        let variable = structuredClone(this.scope.getVariable(statement.identifier.value));
 		if (!variable) {
 			throw new Error.Generator(`Cannot assign to variable "${statement.identifier.value}" because it does not exist`, statement.identifier.start);
 		}
@@ -142,7 +159,8 @@ class ExpressionGenerator {
 		
 		let canImplicitlyTypecast = this.memory.implicitlyTypecast(variable.loc.dataType, expressionValueLocation.dataType);
 		if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${expressionValueLocation.dataType.identifier.value}" to variable of type "${variable.loc.dataType.identifier.value}"`, statement.expression.start);
-    
+    	
+		if (statement.index) variable.loc.index = statement.index.value; //Handle array indexing, operating on clone (made at start of function) of variable location so we don't modify the original
 		this.memory.locationMove(variable.loc, expressionValueLocation);
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }

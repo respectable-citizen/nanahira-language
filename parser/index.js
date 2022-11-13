@@ -19,7 +19,7 @@ expression := equality ";"
 equality := comparison (("!=" | "==") comparison)*
 comparison := term ((">" | ">=" | "<" | "<=") term )*
 term := factor (( "-" | "+" ) factor)*
-factor := unary (( "/" | "*" ) unary)*
+factor := unary (( "/" | "*" | "%" ) unary)*
 unary := (( "!" | "-" ) unary) | primary
 primary := NUMBER | array | "(" expression ")" | IDENTIFIER[ arrayIndex ] | callExpression
 
@@ -144,7 +144,7 @@ class Parser {
        
 		//Skip pairs of array brackets
 		let offset = 1;
-    	while (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.RIGHT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.INTEGER_LITERAL) offset++;
+    	while (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE || this.peekOffset(offset).type == Tokens.RIGHT_SQUARE_BRACE || this.peekOffset(offset + 1).type == Tokens.RIGHT_SQUARE_BRACE) offset++;
 		
 		if (this.peekOffset(offset).type != Tokens.IDENTIFIER) return Nodes.NONE;
 
@@ -320,7 +320,7 @@ class Parser {
         while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) {
             //Parse variable declaration
             let declarationType = this.determineDeclarationType();
-            
+			
 			if (declarationType == Nodes.VARIABLE_DECLARATION) {
                 lines.push(this.parseVariableDeclaration());
             } else {
@@ -362,13 +362,13 @@ class Parser {
 		
 		//Array
 		let array = false;
-		let arraySize;
+		let index;
 		let bracketStart;
 		if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
 			bracketStart = this.previous().start; //Used for showing error when array size is missing
 
 			array = true;
-			if (this.match(Tokens.INTEGER_LITERAL)) arraySize = this.previous();
+			if (this.match([Tokens.INTEGER_LITERAL, Tokens.IDENTIFIER])) index = this.previous();
 
 			this.expect(Tokens.RIGHT_SQUARE_BRACE);
 		}
@@ -386,7 +386,7 @@ class Parser {
             operator,
             expression,
 			array,
-			arraySize,
+			index,
 			bracketStart
         };
     }
@@ -480,7 +480,7 @@ class Parser {
     parseFactor() {
         let expression = this.parseUnary();
 
-        while (this.match([Tokens.STAR, Tokens.SLASH])) {
+        while (this.match([Tokens.STAR, Tokens.SLASH, Tokens.PERCENT])) {
             let operator = this.previous();
             let right = this.parseUnary();
 
