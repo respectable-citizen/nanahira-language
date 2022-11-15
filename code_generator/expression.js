@@ -43,6 +43,23 @@ class ExpressionGenerator {
 				rightLocation = this.memory.moveLocationIntoARegister(this.generateExpression(expression.right));
 			}
 			
+			//Typecast smaller value in binary expression to be the same as the bigger one
+			let smaller;
+			let bigger;
+
+			if (this.memory.getSizeFromDataType(leftLocation.dataType) > this.memory.getSizeFromDataType(rightLocation.dataType)) {
+				bigger = leftLocation;
+				smaller = rightLocation;
+			} else {
+				bigger = rightLocation;
+				smaller = leftLocation;
+			}
+
+			let canImplicitlyTypecast = this.memory.implicitlyTypecast(bigger.dataType, smaller.dataType);
+			if (!canImplicitlyTypecast) throw new Error.Generator(`Cannot perform binary operation on values of type "${leftLocation.dataType.identifier.value}" and "${rightLocation.dataType.identifier.value}"`, expression.start);
+			
+
+
 			let leftRegister = this.memory.retrieveFromLocation(leftLocation);
 			let rightRegister = this.memory.retrieveFromLocation(rightLocation);
 
