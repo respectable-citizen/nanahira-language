@@ -1,11 +1,11 @@
 
-uint8[] numberToString(uint8 number) {
-	uint8[2] digits;
+uint8[] numberToString(uint32 number) {
+	uint8[10] digits;
 
 	uint8 digitIndex = 0;
 	while (number > 0) {
 		uint8 digit = number % 10;
-		digits[digitIndex] = 51;
+		digits[9 - digitIndex] = digit + 48;
 		number = number / 10;
 		
 		digitIndex = digitIndex + 1;
@@ -15,7 +15,7 @@ uint8[] numberToString(uint8 number) {
 }
 
 uint8 main() {
-	uint32 number = 37;
+	uint32 number = 1337;
 	
 	uint8[] string = numberToString(number);
 	
@@ -23,7 +23,7 @@ uint8 main() {
 	asm("mov rax, 1");
 	asm("mov rdi, 1");
 	asm("pop rsi");
-	asm("mov rdx, 2");
+	asm("mov rdx, 10");
 	asm("syscall");
 
 	return 0;
