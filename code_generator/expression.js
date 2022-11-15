@@ -73,6 +73,12 @@ class ExpressionGenerator {
 				//Ensure RDX is 0 as it forms the high-half of the dividend
 				this.assembly.addInstruction(`mov rdx, 0`);
 
+				//In 8 bit division, the remainder goes into AH instead of RDX. We cannot address AH so instead we have to upgrade 8 bit division instead 16 bit division
+				if (rightLocation.dataType.identifier.value == "int8" || rightLocation.dataType.identifier.value == "uint8") {
+					rightLocation.dataType.identifier.value = rightLocation.dataType.identifier.value.replace("8", "16");
+					rightRegister = this.memory.retrieveFromLocation(rightLocation);
+				}
+
 				this.assembly.addInstruction(`div ${rightRegister}`);
 				this.memory.freeRegister(rightLocation);
 

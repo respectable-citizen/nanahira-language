@@ -156,7 +156,7 @@ class Memory {
 	*/
 
 	//Performs move on locations, not limited to just registers (stack, memory, etc)
-	locationMove(destinationLocation, sourceLocation) {
+	locationMove(destinationLocation, sourceLocation, dereference = null) {
 		let destinationName = this.retrieveFromLocation(destinationLocation);
 		let sourceName = this.retrieveFromLocation(sourceLocation);
 		
@@ -165,6 +165,7 @@ class Memory {
 			//Array, choose whether to dereference based on if index is present
 			if (!sourceLocation.index) instruction = "lea";
 		}
+		if (dereference) instruction = dereference ? "mov" : "lea";
 
 		this.assembly.addInstruction(`${instruction} ${destinationName}, ${sourceName}`);
 	}
@@ -179,11 +180,11 @@ class Memory {
 	}
 	
 	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen unless force is true
-	moveLocationIntoARegister(loc, force = false) {
+	moveLocationIntoARegister(loc, force = false, dereference = null) {
 		if (loc.type == "register" && !force) return loc;
 
 		let registerLocation = new Location("register", this.allocateRegister(), loc.dataType);
-		this.locationMove(registerLocation, loc);
+		this.locationMove(registerLocation, loc, dereference);
 		
 		return registerLocation;
 	}
