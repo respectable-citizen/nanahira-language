@@ -3,8 +3,8 @@ maybe you're thinking "a compiler, written in javascript? really? are you stupid
 * once it's all compiled runtime is the same, and i plan on making compilation zoomzoom fast
 * i also plan on rewriting the compiler in this language once its ready
 
-it currently supports basic computation, functions, arrays, if statements, inline asm, and syscalls
-it is possible to write a (somewhat janky) hello world program
+it currently supports basic computation, functions, arrays, if statements, while loops, and inline asm
+input.txt has an example program which converts an integer to a string
 
 might rename it at some point to someone/something, havent decided yet  
 imagine having a whole programming language and compiler dedicated to you  
