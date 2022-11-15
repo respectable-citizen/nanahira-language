@@ -109,7 +109,7 @@ class ExpressionGenerator {
 
 			//Move value into a register so that the original variable doesn't get freed later on, this is a waste of a register. TODO
 			let newLocation = this.memory.moveLocationIntoARegister(loc, true);
-
+			
 			return newLocation;
 		} else if (expression.type == Nodes.UNARY_EXPRESSION) {
 			if (expression.operator == Tokens.MINUS) {

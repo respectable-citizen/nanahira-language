@@ -50,7 +50,7 @@ class CodeGenerator {
 			let parameter = this.assembly.currentFunction.parameters[parameterIndex];
 
 			let baseOffset = 16 + (8 * parameterIndex); //Plus 16 to skip old base pointer and return address. 8 because function arguments are currently passed as 64-bits (8 bites) no matter the data type
-			let argumentStackLocation = Location.Stack(baseOffset);
+			let argumentStackLocation = Location.Stack(baseOffset, "uint64"); //Parameters are passed on the stack as 64 bits
 			let argumentLocation = this.memory.moveLocationIntoARegister(argumentStackLocation, false, true); //Move argument from stack into a register, force = false, dereference = true
 			argumentLocation.dataType = parameter.dataType;
 

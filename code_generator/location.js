@@ -14,9 +14,9 @@ class Location {
 	}
 
 	//Constructor for location on the stack
-	static Stack(baseOffset) {
+	static Stack(baseOffset, dataType) {
 		let loc = new Location("stack", null, {
-			identifier: {value: "uint64"} //Parameters are passed 64 bits at a time no matter the data type
+			identifier: {value: dataType}
 		});
 
 		loc.baseOffset = baseOffset;

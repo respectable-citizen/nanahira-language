@@ -26,6 +26,20 @@ class Memory {
         };
 	}
 
+	getOperationSize(dataType) {
+		let dataTypeSizeBits = this.getSizeFromDataType(dataType);
+		
+		let operationSize;
+		if (dataTypeSizeBits == 8) operationSize = "byte";
+		else if (dataTypeSizeBits == 16) operationSize = "word";
+		else if (dataTypeSizeBits == 32) operationSize = "dword";
+		else if (dataTypeSizeBits == 64) operationSize = "qword";
+			
+		if (!operationSize) throw `Unable to reserve size of ${dataTypeSizeBits} bits`;
+
+		return operationSize;
+	}
+
 	//Returns data type of required bit width to fit integer
 	decideIntegerDataType(value) {
 		if (value < 0) throw "Function does not currently support negative numbers.";
@@ -157,15 +171,22 @@ class Memory {
 
 	//Performs move on locations, not limited to just registers (stack, memory, etc)
 	locationMove(destinationLocation, sourceLocation, dereference = null) {
-		let destinationName = this.retrieveFromLocation(destinationLocation);
-		let sourceName = this.retrieveFromLocation(sourceLocation);
-		
 		let instruction = "mov";
 		if (sourceLocation.type == "stack" || sourceLocation.type == "memory") {
 			//Array, choose whether to dereference based on if index is present
 			if (!sourceLocation.index) instruction = "lea";
 		}
 		if (dereference) instruction = dereference ? "mov" : "lea";
+
+		if (instruction == "lea") {
+			//If we are getting address rather than dereferencing, we need to use all 64 bits
+			destinationLocation.dataType.identifier.value = "uint64";
+		}
+
+		let destinationName = this.retrieveFromLocation(destinationLocation);
+		let sourceName = this.retrieveFromLocation(sourceLocation);
+
+		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;
 
 		this.assembly.addInstruction(`${instruction} ${destinationName}, ${sourceName}`);
 	}
@@ -255,15 +276,7 @@ class Memory {
 		let dataTypeSizeBits = this.getSizeFromDataType(dataType);
 		let arraySizeBytes = (dataTypeSizeBits / 8) * values.length;
 
-		//Determine operation size
-		let operationSize;
-		if (dataTypeSizeBits == 8) operationSize = "byte";
-		else if (dataTypeSizeBits == 16) operationSize = "word";
-		else if (dataTypeSizeBits == 32) operationSize = "dword";
-		else if (dataTypeSizeBits == 64) operationSize = "qword";
-			
-		if (!operationSize) throw `Unable to reserve size of ${dataTypeSizeBits} bits`;
-	
+		let operationSize = this.getOperationSize(dataType);
 
 		//Allocate required bytes on the stack
 		this.assembly.moveStackPointer(-arraySizeBytes);
@@ -289,7 +302,7 @@ class Memory {
 		let arraySizeBytes = dataType.arraySize.value * (this.getSizeFromDataType(dataType) / 8);
 		this.assembly.moveStackPointer(-arraySizeBytes);
 		
-		return Location.Stack(this.assembly.stackPointerOffset);
+		return Location.Stack(this.assembly.stackPointerOffset, dataType.identifier.value);
 	}
 }
 
