@@ -170,7 +170,7 @@ class Memory {
 	*/
 
 	//Performs move on locations, not limited to just registers (stack, memory, etc)
-	locationMove(destinationLocation, sourceLocation, dereference = null) {
+	locationMove(destinationLocation, sourceLocation, dereference = null, zeroExtend = false) {
 		let instruction = "mov";
 		if (sourceLocation.type == "stack" || sourceLocation.type == "memory") {
 			//Array, choose whether to dereference based on if index is present
@@ -183,11 +183,23 @@ class Memory {
 			destinationLocation.dataType.identifier.value = "uint64";
 		}
 
+		let sourceSizeBits = this.getSizeFromDataType(sourceLocation.dataType);
+		let destinationSizeBits = this.getSizeFromDataType(destinationLocation.dataType);
+		if (zeroExtend && instruction == "mov" && sourceSizeBits != 64 && destinationSizeBits > sourceSizeBits) {
+			if (destinationSizeBits == 64 && sourceSizeBits == 32) {
+				destinationLocation.dataType.identifier.value = "uint32";
+				sourceLocation.dataType.identifier.value = "uint32";
+			} else {
+				instruction = "movzx";
+				destinationLocation.dataType.identifier.value = "uint64";
+			}
+		}
+
 		let destinationName = this.retrieveFromLocation(destinationLocation);
 		let sourceName = this.retrieveFromLocation(sourceLocation);
 
 		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;
-
+		
 		this.assembly.addInstruction(`${instruction} ${destinationName}, ${sourceName}`);
 	}
 	
@@ -204,8 +216,10 @@ class Memory {
 	moveLocationIntoARegister(loc, force = false, dereference = null) {
 		if (loc.type == "register" && !force) return loc;
 
-		let registerLocation = new Location("register", this.allocateRegister(), loc.dataType);
-		this.locationMove(registerLocation, loc, dereference);
+		let registerLocation = new Location("register", this.allocateRegister(), {
+			identifier: {value: "uint64"} //Move location into full 64 bits of register so we don't leave some of the old value in the register
+		});
+		this.locationMove(registerLocation, loc, dereference, true); //zeroExtend = true
 		
 		return registerLocation;
 	}
