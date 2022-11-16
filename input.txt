@@ -31,8 +31,6 @@ uint8 main() {
 		asm("mov rsi, rsp");
 		asm("mov rdx, 1");
 		asm("syscall");
-
-		asm("add rsp, 8"); //Compiler doesn't yet deallocate variables from the stack once they fall out of scope, so we have to do it manually for now
 	}
 	
 	uint32 number = 1337;

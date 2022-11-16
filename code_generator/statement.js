@@ -28,8 +28,14 @@ class StatementGenerator {
 	}
 
 	generateBlock(block) {
+		let originalOffset = this.assembly.stackPointerOffset;
         for (let statement of block) this.handleError(this.generateStatement, statement); 
-    }
+		let newOffset = this.assembly.stackPointerOffset;
+    
+		//Move stack pointer back to original location (deallocate locals in block)
+		let deltaOffset = newOffset - originalOffset;
+		this.assembly.moveStackPointer(-deltaOffset);
+	}
 
 	generateStatement(statement) {
 		this.assembly.addInstruction(`; Generated from line ${statement.line}`);
