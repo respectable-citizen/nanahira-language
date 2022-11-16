@@ -225,8 +225,11 @@ class Memory {
 	}
 
 	moveIntegerIntoARegister(integer) {
-		let registerLocation = new Location("register", this.allocateRegister(), this.decideIntegerDataType(integer));
+		let registerLocation = new Location("register", this.allocateRegister(), {
+			identifier: {value: "uint64"} //Move integer into full 64 bits of register
+		});
 		this.assembly.addInstruction(`mov ${this.retrieveFromLocation(registerLocation)}, ${integer.toString()}`);
+		registerLocation.dataType.identifier.value = this.decideIntegerDataType(integer); //Set actual data type of integer on location
 
 		return registerLocation;
 	}
@@ -303,7 +306,7 @@ class Memory {
 			this.assembly.addInstruction(`mov ${operationSize} [rsp${offset}], ${values[i]}`);
 		}
 
-		return new Location.Stack(this.assembly.stackPointerOffset);
+		return Location.Stack(this.assembly.stackPointerOffset, dataType.identifier.value);
 	}
 
 	allocateArrayBSS(name, dataType) {

@@ -17,7 +17,7 @@ class ExpressionGenerator {
 		let variableName;
 
 		if (expression.type == Nodes.ARRAY || expression.type == Nodes.STRING_LITERAL) {
-			arrayDataType = this.assembly.currentStatement.dataType.value;
+			arrayDataType = this.assembly.currentStatement.dataType;
 
 			//Determine name for label
 			if (this.assembly.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.assembly.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {
@@ -100,13 +100,15 @@ class ExpressionGenerator {
 				this.memory.freeRegister(rightLocation);
 
 				return new Location("register", (expression.operator == Tokens.SLASH) ? "a" : "d", "uint64");
-			} else if (expression.operator == Tokens.GREATER) {
+			} else if (expression.operator == Tokens.GREATER || expression.operator == Tokens.LESS) {
+				let mnemonic = (expression.operator == Tokens.GREATER) ? "g" : "l";
+
 				let resultRegister = this.memory.moveIntegerIntoARegister(0);
 				
 				this.assembly.addInstruction(`cmp ${leftRegister}, ${rightRegister}`);
 
-				let skipLabel = "greater_skip_" + this.assembly.generateLabel();
-				this.assembly.addInstruction(`jle ${skipLabel}`);
+				let skipLabel = "comparison_skip_" + this.assembly.generateLabel();
+				this.assembly.addInstruction(`jn${mnemonic} ${skipLabel}`);
 				this.assembly.addInstruction(`mov ${this.memory.retrieveFromLocation(resultRegister)}, 1`);
 				this.assembly.addInstruction(`${skipLabel}:`);
 
