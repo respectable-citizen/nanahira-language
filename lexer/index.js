@@ -307,6 +307,10 @@ class Lexer {
 						 this.addToken({
                             type: Tokens.KEYWORD_WHILE
                         });
+					} else if (identifier == "for") {
+						 this.addToken({
+                            type: Tokens.KEYWORD_FOR
+                        });
 					} else {
                         this.addToken({
                             type: Tokens.IDENTIFIER,

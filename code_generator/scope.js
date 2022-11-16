@@ -86,6 +86,8 @@ class Scope {
 			type: "variable",
 			...variable
 		};
+
+		return variables[variable.name];
 	}
 
 	//Cleans function in global scope

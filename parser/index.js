@@ -41,8 +41,9 @@ statement := expressionStatement | returnStatement | ifStatement | whileStatemen
 
 expressionStatement := (assignmentExpression | callExpression) ";"
 returnStatement := "return" expression ";"
-ifStatement := if "(" expression ")" block
-whileStatement = while "(" expression ")" block
+ifStatement := "if" "(" expression ")" block
+whileStatement = "while" "(" expression ")" block
+forStatement = "for" "(" variableDeclaration expression ";" assignmentExpression ")" block
 
 */
 
@@ -233,6 +234,7 @@ class Parser {
         if (this.peek().type == Tokens.KEYWORD_RETURN) statement = this.parseReturnStatement();
 		else if (this.peek().type == Tokens.KEYWORD_IF) statement = this.parseIfStatement();
 		else if (this.peek().type == Tokens.KEYWORD_WHILE) statement = this.parseWhileStatement();
+		else if (this.peek().type == Tokens.KEYWORD_FOR) statement = this.parseForStatement();
 		else if (this.peek().type == Tokens.IDENTIFIER) statement = this.parseExpressionStatement();
 		if (!statement) this.unexpectedToken();
 		
@@ -311,6 +313,27 @@ class Parser {
 		return {
 			type: Nodes.WHILE_STATEMENT,
 			expression,
+			block
+		};
+	}
+
+	parseForStatement() {
+		this.expect(Tokens.KEYWORD_FOR);
+		
+		this.expect(Tokens.LEFT_PAREN);
+		let declarator = this.parseVariableDeclaration();
+		let condition = this.parseExpression();
+		this.expect(Tokens.END_OF_LINE);
+		let iterator = this.parseAssignmentExpression();
+		this.expect(Tokens.RIGHT_PAREN);
+
+		let block = this.parseBlock();
+
+		return {
+			type: Nodes.FOR_STATEMENT,
+			declarator,
+			condition,
+			iterator,
 			block
 		};
 	}

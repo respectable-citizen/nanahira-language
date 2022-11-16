@@ -45,6 +45,8 @@ class StatementGenerator {
 			this.generateIfStatement(statement);
 		} else if (statement.type == Nodes.WHILE_STATEMENT) {
 			this.generateWhileStatement(statement);
+		} else if (statement.type == Nodes.FOR_STATEMENT) {
+			this.generateForStatement(statement);
 		} else {
 			throw `Cannot generate statement of type ${statement.type}`;
 		}
@@ -75,7 +77,7 @@ class StatementGenerator {
 			if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${loc.dataType.identifier.value}" to variable of type "${statement.dataType.identifier.value}"`, statement.expression.start);
 			
 			//Add variable to function scope
-	        this.scope.addVariable({
+	        return this.scope.addVariable({
 				name: identifier,
 				loc
 			});
@@ -85,7 +87,7 @@ class StatementGenerator {
 				let loc = this.memory.allocateStackSpace(statement.dataType);
 
 				//Add variable to function scope
-				this.scope.addVariable({
+				return this.scope.addVariable({
 					name: statement.identifier.value,
 					loc
 				});
@@ -148,6 +150,28 @@ class StatementGenerator {
 		this.assembly.addInstruction(`jne ${skipLabel}`);
 
 		this.generateBlock(statement.block);
+
+		this.assembly.addInstruction(`jmp ${loopLabel}`);
+		this.assembly.addInstruction(`${skipLabel}:`);
+	}
+	
+	generateForStatement(statement) {
+		let variable = this.generateVariableDeclaration(statement.declarator);
+		
+		let loopLabel = "for_loop_" + this.assembly.generateLabel();
+		let skipLabel = "for_skip_" + this.assembly.generateLabel();
+
+		this.assembly.addInstruction(`${loopLabel}:`);
+		let loc = this.expression.generateExpression(statement.condition);
+
+		let register = this.memory.moveLocationIntoARegister(loc);
+		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
+		this.memory.freeRegister(register);
+		this.assembly.addInstruction(`jne ${skipLabel}`);
+
+		this.generateBlock(statement.block);
+
+		this.expression.generateAssignmentExpression(statement.iterator);
 
 		this.assembly.addInstruction(`jmp ${loopLabel}`);
 		this.assembly.addInstruction(`${skipLabel}:`);
