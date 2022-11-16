@@ -195,7 +195,9 @@ class Lexer {
                         type: Tokens.SLASH_EQUAL
                     });
 
-                } else {
+                } else if (this.peek() == "/") {
+					while (this.get() != "\n");
+				} else {
                     this.addToken({
                         type: Tokens.SLASH
                     });
@@ -284,7 +286,7 @@ class Lexer {
             } else if (this.peek() == ",") {
                 this.advance();
                 this.addToken({
-                    type: Tokens.COMMA
+                    type: Tokens.COMMAi
                 });
             } else {
                 if (this.isAlpha(this.peek())) {
