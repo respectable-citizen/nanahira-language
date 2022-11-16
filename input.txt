@@ -15,6 +15,26 @@ uint8[] numberToString(uint32 number) {
 }
 
 uint8 main() {
+	for (uint8 i = 0; i < 5; i = i + 1) {
+		uint8[] text = "NNHR!  ";
+		uint8[] newline = { 10 };
+		
+		text[6] = i + 49;
+		asm("mov rax, 1");
+		asm("mov rdi, 1");
+		asm("lea rsi, [rsp + 1]");
+		asm("mov rdx, 7");
+		asm("syscall");
+
+		asm("mov rax, 1");
+		asm("mov rdi, 1");
+		asm("mov rsi, rsp");
+		asm("mov rdx, 1");
+		asm("syscall");
+
+		asm("add rsp, 8"); //Compiler doesn't yet deallocate variables from the stack once they fall out of scope, so we have to do it manually for now
+	}
+	
 	uint32 number = 1337;
 	
 	uint8[] string = numberToString(number);
