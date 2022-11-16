@@ -34,7 +34,7 @@ class StatementGenerator {
     
 		//Move stack pointer back to original location (deallocate locals in block)
 		let deltaOffset = newOffset - originalOffset;
-		this.assembly.moveStackPointer(-deltaOffset);
+		if (deltaOffset) this.assembly.moveStackPointer(-deltaOffset);
 	}
 
 	generateStatement(statement) {
