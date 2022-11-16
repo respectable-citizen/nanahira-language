@@ -15,7 +15,7 @@ uint8[] numberToString(uint32 number) {
 }
 
 uint8 main() {
-	for (uint8 i = 0; i < 5; i = i + 1) {
+	for (uint8 i = 0; i < 255; i = i + 1) {
 		uint8[] text = "NNHR!  ";
 		uint8[] newline = { 10 };
 		
