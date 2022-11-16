@@ -17,7 +17,7 @@ class ExpressionGenerator {
 		let variableName;
 
 		if (expression.type == Nodes.ARRAY || expression.type == Nodes.STRING_LITERAL) {
-			arrayDataType = this.assembly.currentStatement.dataType.value;
+			arrayDataType = this.assembly.currentStatement.dataType;
 
 			//Determine name for label
 			if (this.assembly.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.assembly.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {

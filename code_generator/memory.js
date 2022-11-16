@@ -303,7 +303,7 @@ class Memory {
 			this.assembly.addInstruction(`mov ${operationSize} [rsp${offset}], ${values[i]}`);
 		}
 
-		return new Location.Stack(this.assembly.stackPointerOffset);
+		return Location.Stack(this.assembly.stackPointerOffset, dataType.identifier.value);
 	}
 
 	allocateArrayBSS(name, dataType) {
