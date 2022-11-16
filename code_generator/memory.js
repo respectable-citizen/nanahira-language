@@ -225,8 +225,11 @@ class Memory {
 	}
 
 	moveIntegerIntoARegister(integer) {
-		let registerLocation = new Location("register", this.allocateRegister(), this.decideIntegerDataType(integer));
+		let registerLocation = new Location("register", this.allocateRegister(), {
+			identifier: {value: "uint64"} //Move integer into full 64 bits of register
+		});
 		this.assembly.addInstruction(`mov ${this.retrieveFromLocation(registerLocation)}, ${integer.toString()}`);
+		registerLocation.dataType.identifier.value = this.decideIntegerDataType(integer); //Set actual data type of integer on location
 
 		return registerLocation;
 	}
