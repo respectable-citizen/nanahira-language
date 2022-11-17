@@ -150,7 +150,27 @@ class ExpressionGenerator {
 			return this.memory.allocateArrayStack(variableName, arrayDataType, expression.values.map(x => x.value));
 		} else if (expression.type == Nodes.STRING_LITERAL) {
 			//Allocate string on the stack, string is stored as byte array
-			return this.memory.allocateArrayStack(variableName, arrayDataType, expression.value.value.split("").map(x => x.charCodeAt(0)));
+			let values = [];
+			let escaping = false;
+			for (let character of expression.value.value) {
+				if (escaping) {
+					if (character == "\\") value.push("\\".charCodeAt(0));
+					else if (character == "n") values.push(10);
+					else if (character == "0") values.push(0);
+					else throw `Unknown escape sequence \\${character}`;
+
+					continue;
+				}
+
+				if (character == "\\") {
+					escaping = true;
+					continue;
+				}
+
+				values.push(character.charCodeAt(0));
+			}
+			
+			return this.memory.allocateArrayStack(variableName, arrayDataType, values);
 		}
 
 		throw `Cannot currently handle expression "${expression.type}".`;

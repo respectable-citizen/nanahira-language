@@ -1,21 +1,12 @@
 
 void print() {
-	uint8[] text = "Hello world from stdlib!";
+	uint8[] text = "Hello world from stdlib!\n";
 
 	asm("mov rax, 1");
 	asm("mov rdi, 1");
 	asm("mov rsi, rsp");
-	asm("mov rdx, 24");
+	asm("mov rdx, 25");
 	asm("syscall");
 	
-	//Next stop, escape sequences?
-	uint8[] newline = { 10 };
-
-	asm("mov rax, 1");
-	asm("mov rdi, 1");
-	asm("mov rsi, rsp");
-	asm("mov rdx, 1");
-	asm("syscall");
-
 	return;
 }
