@@ -115,7 +115,8 @@ class Memory {
 	}
 
 	//Returns size in bits of a given data type
-	getSizeFromDataType(dataType) {
+	getSizeFromDataType(dataType, ignoreArray = false) {
+		if (!ignoreArray && dataType.isArray) return 64; //Arrays are stored as pointers so they are 64 bits
 		dataType = dataType.identifier.value;
 
 		if (dataType == "uint8" || dataType == "int8") return 8;
@@ -129,7 +130,7 @@ class Memory {
 	//Generates corresponding assembly code that represents the location of some data (registers/memory/stack)
 	retrieveFromLocation(loc) {
 		if (loc.type == "register") {
-			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
+			let bytesPerElement = this.getSizeFromDataType(loc.dataType, true) / 8;
 			
 			let memoryOffset = "";
 			if (typeof loc.index == "object") {
@@ -245,10 +246,20 @@ class Memory {
 		return registerLocation;
 	}
 
-	pushLocation(loc) {
+	pushLocation(loc, updateStackPointerOffset = true) {
 		let register = this.moveLocationIntoARegister(loc);
 		this.assembly.addInstruction(`push ${this.retrieveFromLocation(register)}`);
 		this.freeRegister(register);
+
+		if (updateStackPointerOffset) this.assembly.moveStackPointerOffset(-8);
+	}
+	
+	popIntoLocation(loc) {
+		if (loc.type != "register") throw "Can only pop into register.";
+
+		this.assembly.addInstruction(`pop ${this.retrieveFromLocation(loc)}`);
+		
+		this.assembly.moveStackPointerOffset(8);
 	}
 
 	allocateRegister() {
@@ -285,11 +296,11 @@ class Memory {
 		let usedRegisters = []
 		for (let register in this.registers) {
 			if (!this.registers[register]) {
-				let registerName = this.locationToRegisterName(new Location("register", register, {
+				let registerLocation = new Location("register", register, {
 					identifier: {value: "uint64"}
-				}));
+				});
 
-				usedRegisters.push(registerName);
+				usedRegisters.push(registerLocation);
 			}
 		}
 
@@ -299,13 +310,13 @@ class Memory {
 	saveRegisters() {
 		let usedRegisters = this.getUsedRegisters();
 		
-		for (let register of usedRegisters) this.assembly.addInstruction(`push ${register}`);
+		for (let register of usedRegisters) this.pushLocation(register);
 		
 		return usedRegisters;
 	}
 
 	loadRegisters(usedRegisters) {
-		for (let register of usedRegisters.reverse()) this.assembly.addInstruction(`pop ${register}`);
+		for (let register of usedRegisters.reverse()) this.popIntoLocation(register);
 	}
 
 	allocateData(name, size, values) {

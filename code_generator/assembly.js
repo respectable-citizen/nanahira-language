@@ -87,14 +87,20 @@ class Assembly {
 		this.bss.labels.push(new Label(name, `resb ${bytes.toString()}`));
 	}
 
+	//Moves stack pointer and keeps track of the change in memory
 	moveStackPointer(amount) {
-		this.stackPointerOffset += amount;
-		
+		this.moveStackPointerOffset(amount);
+
 		if (amount >= 0) {
 			this.addInstruction(`add rsp, ${amount}`);
 		} else {
 			this.addInstruction(`sub rsp, ${Math.abs(amount)}`);
 		}
+	}
+
+	//Keeps track of the change to stack pointer but doesn't change it, used for when a push/pop is made and we need to resync the stored stack pointer offset
+	moveStackPointerOffset(amount) {
+		this.stackPointerOffset += amount;
 	}
 
 	generateLabel() {

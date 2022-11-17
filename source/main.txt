@@ -1,9 +1,14 @@
 import stdlib;
 
 uint8 main() {
-	//ladies and gentleman boys and girls i present to you
+	//ladies and gentlemen boys and girls i present to you
 	//something pretty cool
-	print("stdlib test\n");
+	for (uint8 i = 0; i < 3; i++) {
+		if (i == 1) {
+			print("stdlib test\n");
+		}	
+	}
+	//above is obviously silly just demonstrating some control flow
 
 	return 0;
 }

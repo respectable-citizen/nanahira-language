@@ -121,9 +121,9 @@ class ExpressionGenerator {
 			} else if (expression.operator == Tokens.GREATER || expression.operator == Tokens.LESS || expression.operator == Tokens.EQUAL_EQUAL || expression.operator == Tokens.BANG_EQUAL) {
 				let mnemonic;
 				if (expression.operator == Tokens.LESS) {
-					mnemonic = "ng";
-				} else if (expression.operator == Tokens.GREATER) {
 					mnemonic = "nl";
+				} else if (expression.operator == Tokens.GREATER) {
+					mnemonic = "ng";
 				} else if (expression.operator == Tokens.EQUAL_EQUAL) {
 					mnemonic = "ne";
 				} else if (expression.operator == Tokens.BANG_EQUAL) {
@@ -249,8 +249,8 @@ class ExpressionGenerator {
 		if (!func) throw `Cannot call function "${statement.identifier.value}" because it does not exist.`;
 		if (func.external) this.assembly.makeExtern(func.identifier.value);
 
-		let usedRegisters = this.memory.saveRegisters(); //Push registers onto the stack
-		
+		let argumentLocations = [];
+
 		for (let argument of statement.args) {
 			let argumentLocation;
 
@@ -260,7 +260,7 @@ class ExpressionGenerator {
 
 				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
 			
-				argumentLocation = variable.loc;
+				argumentLocation = this.memory.moveLocationIntoARegister(variable.loc, true); //Moves variable into register so when we later free it doesn't free the variable location, this is a waste of a register TODO
 			} else if (argument.type == Nodes.CALL_EXPRESSION) {
 				argumentLocation = this.generateCallExpression(argument);
 			} else if (argument.type == Nodes.INTEGER_LITERAL) {
@@ -274,12 +274,18 @@ class ExpressionGenerator {
 			//All arguments are passed as 64-bit numbers, change the data type
 			argumentLocation.dataType.identifier.value = "uint64";
 			
-			this.memory.pushLocation(argumentLocation);
+			argumentLocations.push(argumentLocation);
 			//this.assembly.addInstruction(`push ${this.memory.retrieveFromLocation(argumentLocation)}`);
+		}
+		
+		let usedRegisters = this.memory.saveRegisters(); //Push registers onto the stack
+
+		for (let argumentLocation of argumentLocations) {
+			this.memory.pushLocation(argumentLocation, false); //Don't update tracked stack pointer because the arguments are popped back off the stack by ret which we don't track
+			this.memory.freeRegister(argumentLocation);
 		}
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);
-
 		this.memory.loadRegisters(usedRegisters);
 
 		return new Location("register", "a", func.returnType); //rax is the designated return register

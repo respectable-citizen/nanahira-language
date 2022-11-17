@@ -491,7 +491,7 @@ class Parser {
     parseEquality() {
         let expression = this.parseComparison();
 
-        while (this.match([Tokens.EQUAL, Tokens.BANG_EQUAL])) {
+        while (this.match([Tokens.EQUAL_EQUAL, Tokens.BANG_EQUAL])) {
             let operator = this.previous();
             let right = this.parseComparison();
 
