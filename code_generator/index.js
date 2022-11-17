@@ -16,14 +16,14 @@ const StatementGenerator = require("./statement");
 
 //TODO: Fully implement data types
 class CodeGenerator {
-    constructor(ast, files) {
+    constructor(ast, files, error) {
         this.scope = new Scope();
         this.assembly = new Assembly(this.scope);
 		this.memory = new Memory(this.scope, this.assembly);
 		this.ast = new AST(ast);
 		this.files = files;
 
-		this.statement = new StatementGenerator(this.scope, this.assembly, this.memory, this.ast);
+		this.statement = new StatementGenerator(this.scope, this.assembly, this.memory, this.ast, error);
 
         //Add primitive data types
         for (let dataType of Types) {

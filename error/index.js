@@ -1,17 +1,17 @@
 
+function Generator(message, arrow = null) {
+	this.name = "CodeGeneratorError";
+	this.message = message;
+	this.arrow = arrow;
+}
+
 class Error {
 	source;
 	generationErrorOccurred = false;
 
 	setSource(_source) {
 		this.source = _source;
-	}
-
-	static Generator(message, arrow = null) {
-		this.name = "CodeGeneratorError";
-		this.message = message;
-		this.arrow = arrow;
-	}
+	}	
 
 	reportError(lineNumber, line, message, arrow = null) {
 		console.log(`ERROR at line ${lineNumber}!`);
@@ -44,11 +44,14 @@ class Error {
 	error(message, node, arrow = null) {
 		//let position = getPositionFromNode(node);
 		
-		let line = source.substring(node.start, node.end);
+		let line = this.source.substring(node.start, node.end);
 		this.reportError(node.line, line, message, arrow ? arrow - node.start : null);
 	
-		generationErrorOccurred = true;
+		this.generationErrorOccurred = true;
 	}
 }
 
-module.exports = Error;
+module.exports = {
+	Error,
+	Generator
+};

@@ -17,7 +17,7 @@ fs.readdirSync("source").forEach(file => {
 
 	const data = fs.readFileSync(`source/${file}`, {encoding: "utf8", flag: "r"});
 
-	let error = new Error();
+	let error = new Error.Error();
 	error.setSource(data);
 
 	let lexer = new Lexer(data);
@@ -39,7 +39,7 @@ for (let fileName in files) {
 	let optimizer = new Optimizer(file.ast);
 	optimizer.run();
 
-	let code_generator = new CodeGenerator(file.ast, files);
+	let code_generator = new CodeGenerator(file.ast, files, file.error);
 	code_generator.run();
 
 	if (!file.error.generationErrorOccurred) {

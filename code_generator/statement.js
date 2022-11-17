@@ -5,11 +5,12 @@ const Location = require("./location");
 const ExpressionGenerator = require("./expression");
 
 class StatementGenerator {
-	constructor(scope, assembly, memory, ast) {
+	constructor(scope, assembly, memory, ast, error) {
 		this.scope = scope;
 		this.assembly = assembly;
 		this.memory = memory;
 		this.ast = ast;
+		this.error = error;
 
 		this.expression = new ExpressionGenerator(this.scope, this.assembly, this.memory, this.ast);
 	}
@@ -19,7 +20,7 @@ class StatementGenerator {
 			func.call(context, node);
 		} catch (e) {
 			if (e.name == "CodeGeneratorError") {
-				Error.error(e.message, node, e.arrow);
+				this.error.error(e.message, node, e.arrow);
 				if (postErrorHandle) postErrorHandle();
 			} else {
 				throw e;

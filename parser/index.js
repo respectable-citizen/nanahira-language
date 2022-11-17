@@ -236,6 +236,7 @@ class Parser {
 
     parseStatement() {
 		let start = this.peek().start;
+		let line = this.peek().line;
 		
 		let statement;
         if (this.peek().type == Tokens.KEYWORD_RETURN) statement = this.parseReturnStatement();
@@ -247,8 +248,9 @@ class Parser {
 		
 		let end = this.previous().end;
 	
-		statement.start = start;
-		statement.end = end;
+		if (!statement.start) statement.start = start;
+		if (!statement.end) statement.end = end;
+		if (!statement.line) statement.line = line;
 
 		return statement;
     }
@@ -326,6 +328,8 @@ class Parser {
 	}
 
 	parseForStatement() {
+		let start = this.peek().start;
+
 		this.expect(Tokens.KEYWORD_FOR);
 		
 		this.expect(Tokens.LEFT_PAREN);
@@ -335,6 +339,8 @@ class Parser {
 		let iterator = this.parseAssignmentExpression();
 		this.expect(Tokens.RIGHT_PAREN);
 
+		let end = this.previous().end;
+
 		let block = this.parseBlock();
 
 		return {
@@ -342,7 +348,9 @@ class Parser {
 			declarator,
 			condition,
 			iterator,
-			block
+			block,
+			start,
+			end
 		};
 	}
 
