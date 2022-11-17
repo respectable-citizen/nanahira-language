@@ -10,20 +10,38 @@ class ExpressionGenerator {
 		this.memory = memory;
 		this.ast = ast;
 	}
+	
+	//Modifies location, must operate on a clone if original must be kept untouched
+	indexIntoLocation(loc, index) {
+		if (index) {
+			if (index.type == Nodes.INTEGER_LITERAL) {
+				loc.index = index.value.value;
+			} else {
+				//Index is an expression, must generate it before setting index
+				let indexLocation = this.generateExpression(index);
+				let displacementRegister = this.memory.moveLocationIntoRegister("b", indexLocation);
+				displacementRegister.dataType.identifier.value = "uint64"; //Effective addressing requires us to have the same register size for base and displacement
+				this.memory.freeRegister(indexLocation);
+				loc.index = displacementRegister;
+			}
+		}
+	}
 
 	generateExpression(expression) {
 		//Some values necessary for generating arrays, string literals are included because they are stored as byte arrays
 		let arrayDataType;
-		let variableName;
+		let arrayName;
 
 		if (expression.type == Nodes.ARRAY || expression.type == Nodes.STRING_LITERAL) {
-			arrayDataType = this.assembly.currentStatement.dataType;
-
-			//Determine name for label
+			//Determine name and data type for array
 			if (this.assembly.currentStatement.type == Nodes.VARIABLE_DECLARATION || this.assembly.currentStatement.type == Nodes.ASSIGNMENT_EXPRESSION) {
-				variableName = this.assembly.currentStatement.identifier.value;
+				arrayName = this.assembly.currentStatement.identifier.value;
+				arrayDataType = this.assembly.currentStatement.dataType;
 			} else {
-				throw `Cannot use array in statement of type ${this.assembly.currentStatement.type}`;
+				arrayName = this.assembly.generateLabel();
+				arrayDataType = {
+					identifier: {value: "uint8"}
+				};
 			}
 		}
 
@@ -100,15 +118,24 @@ class ExpressionGenerator {
 				this.memory.freeRegister(rightLocation);
 
 				return new Location("register", (expression.operator == Tokens.SLASH) ? "a" : "d", "uint64");
-			} else if (expression.operator == Tokens.GREATER || expression.operator == Tokens.LESS) {
-				let mnemonic = (expression.operator == Tokens.GREATER) ? "g" : "l";
+			} else if (expression.operator == Tokens.GREATER || expression.operator == Tokens.LESS || expression.operator == Tokens.EQUAL_EQUAL || expression.operator == Tokens.BANG_EQUAL) {
+				let mnemonic;
+				if (expression.operator == Tokens.LESS) {
+					mnemonic = "ng";
+				} else if (expression.operator == Tokens.GREATER) {
+					mnemonic = "nl";
+				} else if (expression.operator == Tokens.EQUAL_EQUAL) {
+					mnemonic = "ne";
+				} else if (expression.operator == Tokens.BANG_EQUAL) {
+					mnemonic = "e";
+				}
 
 				let resultRegister = this.memory.moveIntegerIntoARegister(0);
 				
 				this.assembly.addInstruction(`cmp ${leftRegister}, ${rightRegister}`);
 
 				let skipLabel = "comparison_skip_" + this.assembly.generateLabel();
-				this.assembly.addInstruction(`jn${mnemonic} ${skipLabel}`);
+				this.assembly.addInstruction(`j${mnemonic} ${skipLabel}`);
 				this.assembly.addInstruction(`mov ${this.memory.retrieveFromLocation(resultRegister)}, 1`);
 				this.assembly.addInstruction(`${skipLabel}:`);
 
@@ -124,10 +151,12 @@ class ExpressionGenerator {
 			if (!variable) throw new Error.Generator(`Variable "${expression.value.value}" does not exist`, expression.value.start);
 			
 			let loc = structuredClone(variable.loc);
-			if (expression.arrayIndex) loc.index = expression.arrayIndex.value;
+			this.indexIntoLocation(loc, expression.arrayIndex);
 
 			//Move value into a register so that the original variable doesn't get freed later on, this is a waste of a register. TODO
-			let newLocation = this.memory.moveLocationIntoARegister(loc, true);
+			this.assembly.addInstruction(";teststart");
+			let newLocation = this.memory.moveLocationIntoARegister(loc, true, loc.index ? true : false);
+			this.assembly.addInstruction(";testend");
 			
 			return newLocation;
 		} else if (expression.type == Nodes.UNARY_EXPRESSION) {
@@ -147,7 +176,7 @@ class ExpressionGenerator {
 			return this.generateCallExpression(expression); //Return data from function is always in rax
 		} else if (expression.type == Nodes.ARRAY) {	
 			//Allocate array pm the stack
-			return this.memory.allocateArrayStack(variableName, arrayDataType, expression.values.map(x => x.value));
+			return this.memory.allocateArrayStack(arrayName, arrayDataType, expression.values.map(x => x.value));
 		} else if (expression.type == Nodes.STRING_LITERAL) {
 			//Allocate string on the stack, string is stored as byte array
 			let values = [];
@@ -169,8 +198,9 @@ class ExpressionGenerator {
 
 				values.push(character.charCodeAt(0));
 			}
+			values.push(0); //Strings are null terminated
 			
-			return this.memory.allocateArrayStack(variableName, arrayDataType, values);
+			return this.memory.allocateArrayStack(arrayName, arrayDataType, values);
 		}
 
 		throw `Cannot currently handle expression "${expression.type}".`;
@@ -205,20 +235,8 @@ class ExpressionGenerator {
 		let canImplicitlyTypecast = this.memory.implicitlyTypecast(variable.loc.dataType, expressionValueLocation.dataType);
 		if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${expressionValueLocation.dataType.identifier.value}" to variable of type "${variable.loc.dataType.identifier.value}"`, statement.expression.start);
     	
-		if (statement.index) {
-			//Handle array indexing, operating on clone (made at start of function) of variable location so we don't modify the original
-			if (statement.index.type == Nodes.INTEGER_LITERAL) {
-				variable.loc.index = statement.index.value.value;
-			} else {
-				//Index is an expression, must generate it before setting index
-				let indexLocation = this.generateExpression(statement.index);
-				let displacementRegister = this.memory.moveLocationIntoRegister("b", indexLocation);
-				displacementRegister.dataType.identifier.value = "uint64"; //Effective addressing requires us to have the same register size for base and displacement
-				this.memory.freeRegister(indexLocation);
-				variable.loc.index = displacementRegister;
-			}
-		}
-
+		this.indexIntoLocation(variable.loc, statement.index);	
+	
 		this.memory.locationMove(variable.loc, expressionValueLocation);
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
@@ -247,14 +265,17 @@ class ExpressionGenerator {
 				argumentLocation = this.generateCallExpression(argument);
 			} else if (argument.type == Nodes.INTEGER_LITERAL) {
 				argumentLocation = this.generateExpression(argument);
+			} else if (argument.type == Nodes.STRING_LITERAL) {
+				argumentLocation = this.generateExpression(argument);
 			} else {
 				throw `Cannot use ${argument.type} as function argument`;
 			}
 			
 			//All arguments are passed as 64-bit numbers, change the data type
 			argumentLocation.dataType.identifier.value = "uint64";
-
-			this.assembly.addInstruction(`push ${this.memory.retrieveFromLocation(argumentLocation)}`);
+			
+			this.memory.pushLocation(argumentLocation);
+			//this.assembly.addInstruction(`push ${this.memory.retrieveFromLocation(argumentLocation)}`);
 		}
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);

@@ -131,7 +131,7 @@ class StatementGenerator {
 
 			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer
 		
-			let argumentBytes = 16 * this.assembly.currentFunction.parameters.length;
+			let argumentBytes = 8 * this.assembly.currentFunction.parameters.length; //Arguments are pissed as 64 bits (8 bytes)
 			if (argumentBytes) {
 				this.assembly.addInstruction(`ret ${argumentBytes}`); //Skip the part of the stack used for arguments
 			} else {

@@ -1,11 +1,21 @@
 
-void print() {
-	uint8[] text = "Hello world from stdlib!\n";
+uint64 strlen(uint8[] str) {
+	uint64 index = 0;
+	while (str[index] != 0) {
+		index = index + 1;
+	}
+	
+	return index;
+}
 
+void print(uint8[] str) {
+	uint64 len = strlen(str);
+
+	asm("push rax");
 	asm("mov rax, 1");
 	asm("mov rdi, 1");
-	asm("mov rsi, rsp");
-	asm("mov rdx, 25");
+	asm("mov rsi, r8");
+	asm("pop rdx");	
 	asm("syscall");
 	
 	return;

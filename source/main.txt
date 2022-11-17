@@ -1,7 +1,9 @@
 import stdlib;
 
 uint8 main() {
-	print();
+	//ladies and gentleman boys and girls i present to you
+	//something pretty cool
+	print("stdlib test\n");
 
 	return 0;
 }

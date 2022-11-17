@@ -23,10 +23,10 @@ unary := (( "!" | "-" ) unary) | primary
 primary := NUMBER | array | "(" expression ")" | IDENTIFIER[ arrayIndex ] | callExpression
 
 array = "{" [ NUMBER ("," NUMBER) ] "}"
-arrayIndex = "[" NUMBER "]"
+arrayIndex = "[" expression "]"
 
 //Expressions
-assignmentExpression := IDENTIFIER[ "[" [ NUMBER ] "]" ] ["=" expression]
+assignmentExpression := IDENTIFIER[ "[" [ expression ] "]" ] ["=" expression]
 callExpression := IDENTIFIER "(" [arguments] ")"
 
 //Declarations
@@ -600,7 +600,7 @@ class Parser {
 				//Check for array index
 				let arrayIndex;
 				if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
-					arrayIndex = this.expect(Tokens.INTEGER_LITERAL);
+					arrayIndex = this.parseExpression();
 					this.expect(Tokens.RIGHT_SQUARE_BRACE);
 				}
 

@@ -132,9 +132,19 @@ class Memory {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
 			let memoryOffset = "";
-			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
+			if (typeof loc.index == "object") {
+				loc = structuredClone(loc);
+				loc.dataType.identifier.value = "uint64"; //Effective addressing requires use of 64 bit register names
 
-			return `${this.locationToRegisterName(loc)}${memoryOffset}`;
+				memoryOffset = ` + ${this.retrieveFromLocation(loc.index)} * ${bytesPerElement}`;
+			} else if (loc.index) {
+				memoryOffset = ` + ${loc.index * bytesPerElement}`;
+			}
+			
+			let name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
+			if (loc.index) name = `[${name}]`;
+
+			return name;
 		} else if (loc.type == "memory") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
@@ -198,6 +208,7 @@ class Memory {
 		let destinationName = this.retrieveFromLocation(destinationLocation);
 		let sourceName = this.retrieveFromLocation(sourceLocation);
 
+		if (sourceName.startsWith("[")) sourceName = `${this.getOperationSize(sourceLocation.dataType)} ${sourceName}`;
 		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;
 		
 		this.assembly.addInstruction(`${instruction} ${destinationName}, ${sourceName}`);
@@ -232,6 +243,12 @@ class Memory {
 		registerLocation.dataType.identifier.value = this.decideIntegerDataType(integer); //Set actual data type of integer on location
 
 		return registerLocation;
+	}
+
+	pushLocation(loc) {
+		let register = this.moveLocationIntoARegister(loc);
+		this.assembly.addInstruction(`push ${this.retrieveFromLocation(register)}`);
+		this.freeRegister(register);
 	}
 
 	allocateRegister() {

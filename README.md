@@ -9,6 +9,7 @@ features:
 * basic control flow (if, for, while)
 * importing different files
 * inline asm
+* world's smallest standard library consisting of strlen and print
 
 source files go in source directory with extension .txt (dont wanna lock myself into a specific extension yet)  
 compiled asm goes into output directory  
