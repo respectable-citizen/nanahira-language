@@ -2,7 +2,7 @@
 uint64 strlen(uint8[] str) {
 	uint64 index = 0;
 	while (str[index] != 0) {
-		index = index + 1;
+		index++;	
 	}
 	
 	return index;

@@ -156,7 +156,12 @@ class Lexer {
                         type: Tokens.PLUS_EQUAL
                     });
 
-                } else {
+                } else if (this.peek() == "+") {
+					this.advance();
+                    this.addToken({
+                        type: Tokens.PLUS_PLUS
+                    });
+				} else {
                     this.addToken({
                         type: Tokens.PLUS
                     });
@@ -168,7 +173,11 @@ class Lexer {
                     this.addToken({
                         type: Tokens.MINUS_EQUAL
                     });
-
+                } else if (this.peek() == "-") {
+					this.advance();
+					this.addToken({
+                        type: Tokens.MINUS_MINUS
+                    });
                 } else {
                     this.addToken({
                         type: Tokens.MINUS

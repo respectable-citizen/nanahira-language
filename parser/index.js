@@ -26,7 +26,7 @@ array = "{" [ NUMBER ("," NUMBER) ] "}"
 arrayIndex = "[" expression "]"
 
 //Expressions
-assignmentExpression := IDENTIFIER[ "[" [ expression ] "]" ] ["=" expression]
+assignmentExpression := IDENTIFIER ( [ "[" [ expression ] "]" ] ["=" expression] ) | ("++" | "--")
 callExpression := IDENTIFIER "(" [arguments] ")"
 
 //Declarations
@@ -405,26 +405,37 @@ class Parser {
 
     parseAssignmentExpression() {
         let identifier = this.expect(Tokens.IDENTIFIER);
-		
-		//Array
+        let operator;
 		let array = false;
 		let index;
 		let bracketStart;
-		if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
-			bracketStart = this.previous().start; //Used for showing error when array size is missing
-
-			array = true;
-			index = this.parseExpression();
-
-			this.expect(Tokens.RIGHT_SQUARE_BRACE);
-		}
-        
 		let expression;
-        let operator;
-        if (this.match([Tokens.EQUAL, Tokens.PLUS_EQUAL, Tokens.MINUS_EQUAL, Tokens.STAR_EQUAL, Tokens.SLASH_EQUAL])) {
-            operator = this.previous();
-            expression = this.parseExpression();
-        }
+
+		if (this.peek().type == Tokens.PLUS_PLUS || this.peek().type == Tokens.MINUS_MINUS) {
+			operator = {
+				type: this.get().type.split("_")[0] + "_EQUAL"
+			};
+
+			expression = {
+				type: Nodes.INTEGER_LITERAL,
+				value: {value: 1}
+			};
+		} else {
+			//Array
+			if (this.match(Tokens.LEFT_SQUARE_BRACE)) {
+				bracketStart = this.previous().start; //Used for showing error when array size is missing
+
+				array = true;
+				index = this.parseExpression();
+
+				this.expect(Tokens.RIGHT_SQUARE_BRACE);
+			}
+        
+        	if (this.match([Tokens.EQUAL, Tokens.PLUS_EQUAL, Tokens.MINUS_EQUAL, Tokens.STAR_EQUAL, Tokens.SLASH_EQUAL])) {
+            	operator = this.previous();
+            	expression = this.parseExpression();
+        	}
+		}
 
         return {
             type: Nodes.ASSIGNMENT_EXPRESSION,
