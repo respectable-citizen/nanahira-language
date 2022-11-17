@@ -1,0 +1,7 @@
+import stdlib;
+
+uint8 main() {
+	print();
+
+	return 0;
+}

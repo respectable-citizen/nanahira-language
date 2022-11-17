@@ -7,20 +7,43 @@ const Error = require("./error");
 
 const fs = require("fs");
 
-const data = fs.readFileSync("./input.txt", {encoding: "utf8", flag: "r"});
+if (!fs.existsSync("source")) fs.mkdirSync("source");
+if (!fs.existsSync("output")) fs.mkdirSync("output");
 
-Error.setSource(data);
+//Parse each file before generating code, we need to do this because we don't use header files like C/C++
+let files = {};
+fs.readdirSync("source").forEach(file => {
+	if (!file.endsWith(".txt")) return;
 
-let lexer = new Lexer(data);
-lexer.run();
+	const data = fs.readFileSync(`source/${file}`, {encoding: "utf8", flag: "r"});
 
-let parser = new Parser(data, lexer.tokens);
-parser.run();
+	let error = new Error();
+	error.setSource(data);
 
-let optimizer = new Optimizer(parser.ast);
-optimizer.run();
+	let lexer = new Lexer(data);
+	lexer.run();
 
-let code_generator = new CodeGenerator(parser.ast);
-code_generator.run();
+	let parser = new Parser(data, error, lexer.tokens);
+	parser.run();
 
-if (!Error.hasGenerationErrorOccurred()) console.log(code_generator.output);
+	files[file] = {
+		file,
+		error,
+		ast: parser.ast
+	};
+});
+
+for (let fileName in files) {
+	let file = files[fileName];
+	
+	let optimizer = new Optimizer(file.ast);
+	optimizer.run();
+
+	let code_generator = new CodeGenerator(file.ast, files);
+	code_generator.run();
+
+	if (!file.error.generationErrorOccurred) {
+		let outfile = fileName.replace(".txt", ".s");
+		fs.writeFileSync(`output/${outfile}`, code_generator.output);
+	}
+}

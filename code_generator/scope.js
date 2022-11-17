@@ -71,10 +71,13 @@ class Scope {
 
 	//Gets added to global scope
 	addFunction(func) {
-		this.addScopeItem([], func.name, {
+		this.addScopeItem([], func.identifier.value, {
 			type: "function",
 			variables: [],
-			...func
+			identifier: func.identifier,
+			returnType: func.returnType,
+			parameters: func.parameters,
+			external: func.external
 		});
 	}
 

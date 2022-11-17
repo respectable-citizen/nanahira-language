@@ -286,7 +286,7 @@ class Lexer {
             } else if (this.peek() == ",") {
                 this.advance();
                 this.addToken({
-                    type: Tokens.COMMAi
+                    type: Tokens.COMMA
                 });
             } else {
                 if (this.isAlpha(this.peek())) {
@@ -306,12 +306,16 @@ class Lexer {
                             type: Tokens.KEYWORD_IF
                         });
 					} else if (identifier == "while") {
-						 this.addToken({
+						this.addToken({
                             type: Tokens.KEYWORD_WHILE
                         });
 					} else if (identifier == "for") {
-						 this.addToken({
+						this.addToken({
                             type: Tokens.KEYWORD_FOR
+                        });
+					} else if (identifier == "import") {
+						this.addToken({
+                            type: Tokens.KEYWORD_IMPORT
                         });
 					} else {
                         this.addToken({

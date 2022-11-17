@@ -41,19 +41,30 @@ class Assembly {
         this.text = new Section("text");
         this.bss = new Section("bss");
 
+		this.globals = [];
+		this.externs = [];
+
         this.instructions = [];      //Buffer for storing instructions.
 
 		this.stackPointerOffset = 0; //How much has the stack pointer moved since we started generating the current function (rsp - rbp)
 	}
 
-	startFunction(identifier) {
+	makeGlobal(symbol) {
+		this.globals.push(`global ${symbol}`);
+	}
+
+	makeExtern(symbol) {
+		this.externs.push(`extern ${symbol}`);
+	}
+
+	startFunction(functionNode) {
+		this.currentFunction = functionNode;
 		this.stackPointerOffset = 0;
-		this.currentFunctionIdentifier = identifier;
+		this.currentFunctionIdentifier = functionNode.identifier.value;
         
-		this.scope.addFunction({
-			name: identifier
-		});
-		this.scope.descendScope(identifier);
+		this.scope.addFunction(functionNode);
+		
+		this.scope.descendScope(this.currentFunctionIdentifier);
 	}
 	
 	addInstruction(instruction) {
@@ -99,7 +110,9 @@ class Assembly {
 	}
 
     output() {
-        return `global main
+        return `${this.globals.join("\n")}
+
+${this.externs.join("\n")}
 
 ${this.data.output()}
 

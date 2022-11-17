@@ -107,25 +107,36 @@ class StatementGenerator {
     }
 
 	generateReturnStatement(statement) {
-    	let loc = this.expression.generateExpression(statement.expression);
+    	let loc;
+		if (statement.expression) loc = this.expression.generateExpression(statement.expression);
 		
 		if (this.assembly.currentFunctionIdentifier == "main") {
 			//Since this is the main function, the return value should be used as an exit code
 			//This uses a Linux syscall which isn't ideal but is useful for short-term testing
 			this.assembly.addInstruction(`mov rax, 60`);
-			this.memory.moveLocationIntoRegister("di", loc);
+			if (loc) {
+				this.memory.moveLocationIntoRegister("di", loc);
+			} else {
+				this.assembly.addInstruction(`mov rdi, 0`);
+			}
 			this.assembly.addInstruction(`syscall`);
 		} else {
 			//Clear locals from stack
 			this.assembly.moveStackPointer(-this.assembly.stackPointerOffset);
 
-			this.memory.moveLocationIntoRegister("a", loc);
-			this.memory.freeRegister(loc);
-		
+			if (loc) {
+				this.memory.moveLocationIntoRegister("a", loc);
+				this.memory.freeRegister(loc);
+			}
+
 			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer
 		
 			let argumentBytes = 16 * this.assembly.currentFunction.parameters.length;
-			this.assembly.addInstruction(`ret ${argumentBytes}`); //Ignore the part of the stack used for arguments
+			if (argumentBytes) {
+				this.assembly.addInstruction(`ret ${argumentBytes}`); //Skip the part of the stack used for arguments
+			} else {
+				this.assembly.addInstruction(`ret`);
+			}
 		}
 	}
 	

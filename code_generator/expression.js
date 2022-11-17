@@ -207,10 +207,9 @@ class ExpressionGenerator {
 		if (statement.identifier.value == "asm") return this.generateASMCall(statement);
 		//if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
-		let functionNode = this.ast.getFunctionNode(statement.identifier.value);
-		if (!functionNode) {
-			throw `Cannot call function "${statement.identifier.value}" because it does not exist.`;
-		}
+		let func = this.scope.getFunction(statement.identifier.value);
+		if (!func) throw `Cannot call function "${statement.identifier.value}" because it does not exist.`;
+		if (func.external) this.assembly.makeExtern(func.identifier.value);
 
 		let usedRegisters = this.memory.saveRegisters(); //Push registers onto the stack
 		
@@ -242,7 +241,7 @@ class ExpressionGenerator {
 
 		this.memory.loadRegisters(usedRegisters);
 
-		return new Location("register", "a", functionNode.returnType); //rax is the designated return register
+		return new Location("register", "a", func.returnType); //rax is the designated return register
 	}
 
 	generateASMCall(statement) {

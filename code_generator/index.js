@@ -3,6 +3,9 @@ const Types = require("./types");
 const Error = require("../error");
 const Location = require("./location");
 
+const Lexer = require("../lexer");
+const Parser = require("../parser");
+
 const Scope = require("./scope");
 
 const Assembly = require("./assembly").Assembly;
@@ -13,11 +16,12 @@ const StatementGenerator = require("./statement");
 
 //TODO: Fully implement data types
 class CodeGenerator {
-    constructor(ast) {
+    constructor(ast, files) {
         this.scope = new Scope();
         this.assembly = new Assembly(this.scope);
 		this.memory = new Memory(this.scope, this.assembly);
 		this.ast = new AST(ast);
+		this.files = files;
 
 		this.statement = new StatementGenerator(this.scope, this.assembly, this.memory, this.ast);
 
@@ -30,8 +34,8 @@ class CodeGenerator {
     generateFunction(func) {
 		this.memory.freeAllRegisters(); //Registers are caller-saved so we can safely use all registers
 
-		this.assembly.currentFunction = func;
-		this.assembly.startFunction(func.identifier.value);
+		this.assembly.startFunction(func);
+		this.assembly.makeGlobal(func.identifier.value); //All functions are accessible from every file, probably a bad idea but works for now
 
 		if (func.identifier.value == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
 
@@ -67,8 +71,21 @@ class CodeGenerator {
 		this.assembly.finishFunction();
     }	
 
+	handleImports(imports) {
+		for (let currentImport of imports) {
+			let fileName = `${currentImport.identifier.value}.txt`;
+			let file = this.files[fileName];
+			
+			for (let declaration of file.ast.declarations) {
+				declaration.external = true;
+				if (declaration.type == Nodes.FUNCTION_DECLARATION) this.scope.addFunction(declaration);
+			}
+		}
+	}
+
     run() {
-        if (!this.ast.getFunctionNode("main")) throw "Missing main function.";
+        //if (!this.ast.getFunctionNode("main")) throw "Missing main function.";
+		this.handleImports(this.ast.tree.imports);
 
         for (let func of this.ast.functions) {
 			this.statement.handleError(this.generateFunction, func, this, () => {

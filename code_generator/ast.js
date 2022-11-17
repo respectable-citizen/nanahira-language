@@ -4,7 +4,7 @@ class AST {
 	constructor(tree) {
 		this.tree = tree;
         
-		this.functions = this.tree.filter(node => node.type == Nodes.FUNCTION_DECLARATION);
+		this.functions = this.tree.declarations.filter(node => node.type == Nodes.FUNCTION_DECLARATION);
 	}
 
 	getFunctionNode(identifier) {

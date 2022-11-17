@@ -1,11 +1,10 @@
 const Tokens = require("../lexer/tokens");
 const Nodes = require("./nodes");
-const Error = require("../error");
 
 /*
 Parser grammar:
 
-program := declaration*
+program := importStatement* declaration*
 
 declaration := functionDeclaration | variableDeclaration
 
@@ -40,16 +39,18 @@ dataType = IDENTIFIER [ "[" "]" ]
 statement := expressionStatement | returnStatement | ifStatement | whileStatement
 
 expressionStatement := (assignmentExpression | callExpression) ";"
-returnStatement := "return" expression ";"
+returnStatement := "return" [expression] ";"
 ifStatement := "if" "(" expression ")" block
 whileStatement = "while" "(" expression ")" block
 forStatement = "for" "(" variableDeclaration expression ";" assignmentExpression ")" block
+importStatement = "import" identifier ";"
 
 */
 
 class Parser {
-    constructor(code, tokens) {
+    constructor(code, error, tokens) {
         this.code = code;
+		this.error = error;
         this.tokens = tokens;
         this.pos = 0;
     }
@@ -60,7 +61,7 @@ class Parser {
 		let endLine = lineTokens[lineTokens.length - 1].end;
 		let line = this.code.substring(startLine, endLine);
 
-		Error.reportError(this.peek().line, line, message, this.peek().start - startLine);
+		this.error.reportError(this.peek().line, line, message, this.peek().start - startLine);
 		throw "TODO: Implement synchronization for errors (this will allow the compiler to keep parsing even after an error)";
 	}
 
@@ -134,10 +135,16 @@ class Parser {
     }
 
     parseProgram() {
+		this.imports = [];
+		while (this.peek().type == Tokens.KEYWORD_IMPORT) this.imports.push(this.parseImportStatement());
+
         this.declarations = [];
         while (!this.atEnd()) this.declarations.push(this.parseDeclaration());
 
-        return this.declarations;
+        return {
+			imports: this.imports,
+			declarations: this.declarations
+		};
     }
 
     determineDeclarationType() {
@@ -271,7 +278,8 @@ class Parser {
 		let start = this.peek().start;
         
 		this.expect(Tokens.KEYWORD_RETURN);
-        let expression = this.parseExpression();
+        let expression;
+		if (this.peek().type != Tokens.END_OF_LINE) expression = this.parseExpression();
         this.expect(Tokens.END_OF_LINE);
 
         return {
@@ -335,6 +343,19 @@ class Parser {
 			condition,
 			iterator,
 			block
+		};
+	}
+
+	parseImportStatement() {
+		this.expect(Tokens.KEYWORD_IMPORT);
+
+		let identifier = this.expect(Tokens.IDENTIFIER);
+
+		this.expect(Tokens.END_OF_LINE);
+
+		return {
+			type: Nodes.IMPORT_STATEMENT,
+			identifier
 		};
 	}
 
@@ -551,7 +572,7 @@ class Parser {
 			while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) {
 				let number = this.expect(Tokens.INTEGER_LITERAL);
 				values.push(number);
-
+				
 				if (this.peek().type != Tokens.RIGHT_CURLY_BRACE) this.expect(Tokens.COMMA);
 			}
 			this.expect(Tokens.RIGHT_CURLY_BRACE);
