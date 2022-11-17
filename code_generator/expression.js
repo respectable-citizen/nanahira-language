@@ -207,6 +207,8 @@ class ExpressionGenerator {
 		if (statement.identifier.value == "asm") return this.generateASMCall(statement);
 		//if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
+		let usedRegisters = this.memory.saveRegisters(); //Push registers onto the stack
+		
 		for (let argument of statement.args) {
 			let argumentLocation;
 
@@ -232,6 +234,8 @@ class ExpressionGenerator {
 		}
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);
+
+		this.memory.loadRegisters(usedRegisters);
 
 		return new Location("register", "a", this.ast.getFunctionNode(statement.identifier.value).returnType); //rax is the designated return register
 	}

@@ -259,6 +259,38 @@ class Memory {
 		this.registers[loc] = true;
     }
 
+
+	freeAllRegisters() {
+		for (let register in this.registers) this.registers[register] = true;
+	}
+
+	getUsedRegisters() {
+		let usedRegisters = []
+		for (let register in this.registers) {
+			if (!this.registers[register]) {
+				let registerName = this.locationToRegisterName(new Location("register", register, {
+					identifier: {value: "uint64"}
+				}));
+
+				usedRegisters.push(registerName);
+			}
+		}
+
+		return usedRegisters;
+	}
+
+	saveRegisters() {
+		let usedRegisters = this.getUsedRegisters();
+		
+		for (let register of usedRegisters) this.assembly.addInstruction(`push ${register}`);
+		
+		return usedRegisters;
+	}
+
+	loadRegisters(usedRegisters) {
+		for (let register of usedRegisters.reverse()) this.assembly.addInstruction(`pop ${register}`);
+	}
+
 	allocateData(name, size, values) {
 		this.assembly.addDataEntry(name, size, values.join(", "));
 	}

@@ -28,6 +28,8 @@ class CodeGenerator {
     }
 
     generateFunction(func) {
+		this.memory.freeAllRegisters(); //Registers are caller-saved so we can safely use all registers
+
 		this.assembly.currentFunction = func;
 		this.assembly.startFunction(func.identifier.value);
 
