@@ -183,11 +183,12 @@ class ExpressionGenerator {
 			let escaping = false;
 			for (let character of expression.value.value) {
 				if (escaping) {
-					if (character == "\\") value.push("\\".charCodeAt(0));
+					if (character == "\\") values.push("\\".charCodeAt(0));
 					else if (character == "n") values.push(10);
 					else if (character == "0") values.push(0);
 					else throw `Unknown escape sequence \\${character}`;
 
+					escaping = false;
 					continue;
 				}
 
