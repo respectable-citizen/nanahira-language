@@ -100,7 +100,20 @@ class Memory {
 		if (requiredDataType.identifier.value == currentDataType.identifier.value) return true; //Types are already the same, no need to cast
 
 		//Expression data type and variable data type do not match, can we implicitly typecast?
-		if (requiredDataType.identifier.value.startsWith("uint") && currentDataType.identifier.value.startsWith("uint")) {
+		let castableIntTypes = [
+			"int8",
+			"uint8",
+
+			"int16",
+			"uint16",
+
+			"int32",
+			"uint32",
+
+			"int64",
+			"uint64"
+		];
+		if (castableIntTypes.includes(requiredDataType.identifier.value) && castableIntTypes.includes(currentDataType.identifier.value)) {
 			//Integer typecasting
 			let requiredBitSize = this.getSizeFromDataType(requiredDataType);
 			let currentBitSize = this.getSizeFromDataType(currentDataType);

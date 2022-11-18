@@ -3,7 +3,7 @@ import stdlib;
 uint8 main() {
 	//ladies and gentlemen boys and girls i present to you
 	//something pretty cool
-	for (uint8 i = 0; i < 3; i++) {
+	for (int8 i = 0; i < 3; i++) {
 		if (i == 1) {
 			print("stdlib test\n");
 		}	

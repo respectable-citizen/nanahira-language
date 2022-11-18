@@ -227,7 +227,7 @@ class ExpressionGenerator {
 					value: statement.identifier.value
 					}
 				},
-				right: statement.expression                    
+				right: statement.expression
 			};
 
         	expressionValueLocation = this.generateExpression(expression);
