@@ -247,7 +247,7 @@ class ExpressionGenerator {
 		//if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
 		let func = this.scope.getFunction(statement.identifier.value);
-		if (!func) throw `Cannot call function "${statement.identifier.value}" because it does not exist.`;
+		if (!func) throw new Error.Generator(`Cannot call function "${statement.identifier.value}" because it does not exist.`, statement.identifier.start);
 		if (func.external) this.assembly.makeExtern(func.identifier.value);
 
 		let argumentLocations = [];
