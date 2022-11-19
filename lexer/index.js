@@ -284,12 +284,12 @@ class Lexer {
                 if (this.peek() == "&") {
                     this.advance();
                     this.addToken({
-                        type: Tokens.AND_AND
+                        type: Tokens.AMPERSAND_AMPERSAND
                     });
 
                 } else {
                     this.addToken({
-                        type: Tokens.AND
+                        type: Tokens.AMPERSAND
                     });
                 }
             } else if (this.peek() == ",") {
