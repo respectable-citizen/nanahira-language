@@ -97,7 +97,7 @@ class Memory {
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
-		if (requiredDataType.identifier.value == currentDataType.identifier.value) return true; //Types are already the same, no need to cast
+		if (requiredDataType.identifier.value == currentDataType.identifier.value && requiredDataType.pointer == currentDataType.pointer) return true; //Types are already the same, no need to cast
 
 		//Expression data type and variable data type do not match, can we implicitly typecast?
 		let castableIntTypes = [
@@ -121,6 +121,7 @@ class Memory {
 			//if (requiredBitSize >= currentBitSize) return true;
 			
 			currentDataType.identifier.value = requiredDataType.identifier.value;
+			currentDataType.pointer = requiredDataType.pointer;
 			return true;
 		}
 
@@ -130,6 +131,8 @@ class Memory {
 	//Returns size in bits of a given data type
 	getSizeFromDataType(dataType, ignoreArray = false) {
 		if (!ignoreArray && dataType.isArray) return 64; //Arrays are stored as pointers so they are 64 bits
+		if (dataType.pointer) return 64; //Pointers are memory addresses, so 64 bits
+
 		dataType = dataType.identifier.value;
 
 		if (dataType == "uint8" || dataType == "int8") return 8;
@@ -141,7 +144,9 @@ class Memory {
 	}
 
 	//Generates corresponding assembly code that represents the location of some data (registers/memory/stack)
-	retrieveFromLocation(loc) {
+	retrieveFromLocation(loc, dereference) {
+		let name;
+
 		if (loc.type == "register") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType, true) / 8;
 			
@@ -155,17 +160,14 @@ class Memory {
 				memoryOffset = ` + ${loc.index * bytesPerElement}`;
 			}
 			
-			let name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
-			if (loc.index) name = `[${name}]`;
-
-			return name;
+			name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
 		} else if (loc.type == "memory") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
 			let memoryOffset = "";
 			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
 
-			return `[${loc.loc}${memoryOffset}]`;
+			name = `${loc.loc}${memoryOffset}`;
 		} else if (loc.type == "stack") {
 			let memoryOffset = "";
 			if (typeof loc.index == "object") {
@@ -177,10 +179,14 @@ class Memory {
 				if (totalOffset) memoryOffset = (totalOffset > 0) ? ` + ${totalOffset}` : ` - ${-totalOffset}`;
 			}
 
-			return `[rbp${memoryOffset}]`;
+			name = `rbp${memoryOffset}`;
 		} else {
 			throw `Cannot handle location type ${loc.type}`;
 		}
+
+		if (dereference || name.includes("+") || name.includes("-") || name.includes("*")) name = `[${name}]`;
+
+		return name;
 	}
 
 	/*
@@ -219,8 +225,8 @@ class Memory {
 			}
 		}
 
-		let destinationName = this.retrieveFromLocation(destinationLocation);
-		let sourceName = this.retrieveFromLocation(sourceLocation);
+		let destinationName = this.retrieveFromLocation(destinationLocation, false);
+		let sourceName = this.retrieveFromLocation(sourceLocation, dereference);
 
 		if (sourceName.startsWith("[")) sourceName = `${this.getOperationSize(sourceLocation.dataType)} ${sourceName}`;
 		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;
@@ -244,6 +250,7 @@ class Memory {
 		let registerLocation = new Location("register", this.allocateRegister(), {
 			identifier: {value: "uint64"} //Move location into full 64 bits of register so we don't leave some of the old value in the register
 		});
+		registerLocation.dataType = loc.dataType;
 		this.locationMove(registerLocation, loc, dereference, true); //zeroExtend = true
 		
 		return registerLocation;
@@ -389,9 +396,14 @@ class Memory {
 	}
 	
 	allocateStackSpace(dataType) {
-		let arraySizeBytes = dataType.arraySize.value * (this.getSizeFromDataType(dataType) / 8);
-		this.assembly.moveStackPointer(-arraySizeBytes);
+		let bytes;
+		if (dataType.isArray) {
+			bytes = dataType.arraySize.value * (this.getSizeFromDataType(dataType) / 8);
+		} else {
+			bytes = this.getSizeFromDataType(dataType) / 8;
+		}
 		
+		this.assembly.moveStackPointer(-bytes);
 		return Location.Stack(this.assembly.stackPointerOffset, dataType.identifier.value);
 	}
 }

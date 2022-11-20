@@ -1,14 +1,8 @@
 import stdlib;
 
 uint8 main() {
-	//ladies and gentlemen boys and girls i present to you
-	//something pretty cool
-	for (int8 i = 0; i < 3; i++) {
-		if (i == 1) {
-			print("stdlib test\n");
-		}	
-	}
-	//above is obviously silly just demonstrating some control flow
+	uint8 num = 5;
+	uint8* numptr = &num;
 
-	return 0;
+	return *numptr;
 }

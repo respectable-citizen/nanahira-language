@@ -132,7 +132,14 @@ class ExpressionGenerator {
 
 				let resultRegister = this.memory.moveIntegerIntoARegister(0);
 				
-				this.assembly.addInstruction(`cmp ${leftRegister}, ${rightRegister}`);
+				let leftLoc = structuredClone(leftLocation);
+				let rightLoc = structuredClone(rightLocation);
+
+				//Have to compare full 64 bits of registers
+				leftLoc.dataType.identifier.value = "uint64";
+				rightLoc.dataType.identifier.value = "uint64";
+	
+				this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(leftLoc)}, ${this.memory.retrieveFromLocation(rightLoc)}`);
 
 				let skipLabel = "comparison_skip_" + this.assembly.generateLabel();
 				this.assembly.addInstruction(`j${mnemonic} ${skipLabel}`);
@@ -154,9 +161,8 @@ class ExpressionGenerator {
 			this.indexIntoLocation(loc, expression.arrayIndex);
 
 			//Move value into a register so that the original variable doesn't get freed later on, this is a waste of a register. TODO
-			this.assembly.addInstruction(";teststart");
+			//console.log(loc);
 			let newLocation = this.memory.moveLocationIntoARegister(loc, true, loc.index ? true : false);
-			this.assembly.addInstruction(";testend");
 			
 			return newLocation;
 		} else if (expression.type == Nodes.UNARY_EXPRESSION) {
@@ -166,6 +172,36 @@ class ExpressionGenerator {
 				this.assembly.addInstruction(`neg ${expressionRegister}`);
 
 				return new Location("register", expressionRegister, "uint64");
+			} else if (expression.operator == Tokens.AMPERSAND) {
+				//Address of
+				
+				if (expression.expression.type != Nodes.VARIABLE) throw new Error.Generator("Can not take address of non-variable expression.", expression.expression.value ? expression.expression.value.start : expression.expression.left.value.start);
+				let variable = this.scope.getVariable(expression.expression.value.value);
+				if (!variable) throw new Error.Generator(`Variable "${expression.expression.value.value}" does not exist`, expression.expression.value.start);
+				
+				let loc;
+				if (variable.loc.type == "register") {
+					//Registers do not have a memory address, so we have to move the variable into memory first
+					loc = this.memory.allocateStackSpace(variable.loc.dataType);
+					this.memory.locationMove(loc, variable.loc);
+				} else {
+					loc = structuredClone(variable.loc);
+				}
+
+				loc.dataType.pointer = 1; //Location is a single-level pointer
+				return loc;
+			} else if (expression.operator == Tokens.STAR) {
+				//Dereference
+				
+				let expressionRegister = this.generateExpression(expression.expression);
+				//console.log("MOVING IT");
+				//console.log(expressionRegister);
+				let loc = this.memory.moveLocationIntoARegister(expressionRegister, true, true);
+				loc.dataType.pointer--;
+
+				if (expressionRegister.type == "register") this.memory.freeRegister(expressionRegister);
+
+				return loc;
 			}
 
 			throw `Cannot currently handle operator "${expression.operator}"`;

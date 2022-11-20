@@ -19,7 +19,7 @@ equality := comparison (("!=" | "==") comparison)*
 comparison := term ((">" | ">=" | "<" | "<=") term )*
 term := factor (( "-" | "+" ) factor)*
 factor := unary (( "/" | "*" | "%" ) unary)*
-unary := (( "!" | "-" ) unary) | primary
+unary := (( "!" | "-" | "&" | "*") unary) | primary
 primary := NUMBER | array | "(" expression ")" | IDENTIFIER[ arrayIndex ] | callExpression
 
 array = "{" [ NUMBER ("," NUMBER) ] "}"
@@ -155,6 +155,11 @@ class Parser {
     	if (this.peekOffset(offset).type == Tokens.LEFT_SQUARE_BRACE) {
 			while (this.peekOffset(offset++).type != Tokens.RIGHT_SQUARE_BRACE);
 		}
+	
+		//Skip asterisks (pointer)
+    	if (this.peekOffset(offset).type == Tokens.STAR) {
+			while (this.peekOffset(offset++).type != Tokens.STAR);
+		}
 		
 		if (this.peekOffset(offset).type != Tokens.IDENTIFIER) return Nodes.NONE;
 
@@ -226,11 +231,15 @@ class Parser {
 			this.expect(Tokens.RIGHT_SQUARE_BRACE);
 		}
 
+		let pointer = 0; //Number of nested pointers
+		while (this.match(Tokens.STAR)) pointer++;
+
 		return {
 			type: Nodes.DATA_TYPE,
 			identifier,
 			isArray,
-			arraySize
+			arraySize,
+			pointer
 		};
 	}
 
@@ -561,7 +570,7 @@ class Parser {
     }
 
     parseUnary() {
-        if (this.match([Tokens.MINUS, Tokens.BANG])) {
+        if (this.match([Tokens.MINUS, Tokens.BANG, Tokens.AMPERSAND, Tokens.STAR])) {
             let operator = this.previous();
             let expression = this.parseUnary();
 
