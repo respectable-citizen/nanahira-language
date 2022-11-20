@@ -1,11 +1,8 @@
 import stdlib;
 
 uint8 main() {
-	uint8 test = 5;
-	uint8* testptr = 1;
-	testptr = &test;
+	uint8 num = 5;
+	uint8* numptr = &num;
 
-	uint8 number = *testptr;
-
-	return 0;
+	return *numptr;
 }

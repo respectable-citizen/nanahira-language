@@ -144,7 +144,9 @@ class Memory {
 	}
 
 	//Generates corresponding assembly code that represents the location of some data (registers/memory/stack)
-	retrieveFromLocation(loc) {
+	retrieveFromLocation(loc, dereference) {
+		let name;
+
 		if (loc.type == "register") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType, true) / 8;
 			
@@ -158,17 +160,14 @@ class Memory {
 				memoryOffset = ` + ${loc.index * bytesPerElement}`;
 			}
 			
-			let name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
-			if (loc.index || loc.dataType.pointer) name = `[${name}]`;
-
-			return name;
+			name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
 		} else if (loc.type == "memory") {
 			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
 			
 			let memoryOffset = "";
 			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
 
-			return `[${loc.loc}${memoryOffset}]`;
+			name = `${loc.loc}${memoryOffset}`;
 		} else if (loc.type == "stack") {
 			let memoryOffset = "";
 			if (typeof loc.index == "object") {
@@ -180,10 +179,14 @@ class Memory {
 				if (totalOffset) memoryOffset = (totalOffset > 0) ? ` + ${totalOffset}` : ` - ${-totalOffset}`;
 			}
 
-			return `[rbp${memoryOffset}]`;
+			name = `rbp${memoryOffset}`;
 		} else {
 			throw `Cannot handle location type ${loc.type}`;
 		}
+
+		if (dereference || name.includes("+") || name.includes("-") || name.includes("*")) name = `[${name}]`;
+
+		return name;
 	}
 
 	/*
@@ -222,8 +225,8 @@ class Memory {
 			}
 		}
 
-		let destinationName = this.retrieveFromLocation(destinationLocation);
-		let sourceName = this.retrieveFromLocation(sourceLocation);
+		let destinationName = this.retrieveFromLocation(destinationLocation, false);
+		let sourceName = this.retrieveFromLocation(sourceLocation, dereference);
 
 		if (sourceName.startsWith("[")) sourceName = `${this.getOperationSize(sourceLocation.dataType)} ${sourceName}`;
 		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;

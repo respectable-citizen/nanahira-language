@@ -132,7 +132,14 @@ class ExpressionGenerator {
 
 				let resultRegister = this.memory.moveIntegerIntoARegister(0);
 				
-				this.assembly.addInstruction(`cmp ${leftRegister}, ${rightRegister}`);
+				let leftLoc = structuredClone(leftLocation);
+				let rightLoc = structuredClone(rightLocation);
+
+				//Have to compare full 64 bits of registers
+				leftLoc.dataType.identifier.value = "uint64";
+				rightLoc.dataType.identifier.value = "uint64";
+	
+				this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(leftLoc)}, ${this.memory.retrieveFromLocation(rightLoc)}`);
 
 				let skipLabel = "comparison_skip_" + this.assembly.generateLabel();
 				this.assembly.addInstruction(`j${mnemonic} ${skipLabel}`);
@@ -190,6 +197,7 @@ class ExpressionGenerator {
 				//console.log("MOVING IT");
 				//console.log(expressionRegister);
 				let loc = this.memory.moveLocationIntoARegister(expressionRegister, true, true);
+				loc.dataType.pointer--;
 
 				if (expressionRegister.type == "register") this.memory.freeRegister(expressionRegister);
 
@@ -266,10 +274,6 @@ class ExpressionGenerator {
     	
 		this.indexIntoLocation(variable.loc, statement.index);	
 	
-		if (statement.identifier.value == "testptr") {
-			console.log(variable.loc);
-			console.log(expressionValueLocation);
-		}
 		this.memory.locationMove(variable.loc, expressionValueLocation);
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
