@@ -292,12 +292,7 @@ class ExpressionGenerator {
 			let argumentLocation;
 
 			if (argument.type == Nodes.VARIABLE) {
-				let variable = this.scope.getVariable(argument.value.value);
-				if (!variable) throw new Error.Generator(`Cannot use variable "${argument.value.value}" as an argument because it does not exist`, argument.value.start);
-
-				if (variable.loc.type != "register") throw "No support for non-register arguments when calling functions";
-			
-				argumentLocation = this.memory.moveLocationIntoARegister(variable.loc, true); //Moves variable into register so when we later free it doesn't free the variable location, this is a waste of a register TODO
+				argumentLocation = this.generateExpression(argument);
 			} else if (argument.type == Nodes.CALL_EXPRESSION) {
 				argumentLocation = this.generateCallExpression(argument);
 			} else if (argument.type == Nodes.INTEGER_LITERAL) {

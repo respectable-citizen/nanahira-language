@@ -3,6 +3,11 @@ import stdlib;
 uint8 main() {
 	uint8 num = 5;
 	uint8* numptr = &num;
+	
+	uint8[] text = "Number: 0\n";
+	text[8] = *numptr + 48;
+
+	print(text);
 
 	return *numptr;
 }
