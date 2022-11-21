@@ -65,7 +65,7 @@ class ExpressionGenerator {
 			let smaller;
 			let bigger;
 
-			if (this.memory.getSizeFromDataType(leftLocation.dataType) > this.memory.getSizeFromDataType(rightLocation.dataType)) {
+			if (this.memory.getSizeOfDataType(leftLocation.dataType) > this.memory.getSizeOfDataType(rightLocation.dataType)) {
 				bigger = leftLocation;
 				smaller = rightLocation;
 			} else {
@@ -206,7 +206,7 @@ class ExpressionGenerator {
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
 		} else if (expression.type == Nodes.CALL_EXPRESSION) {
-			let func = this.ast.getFunctionNode(expression.identifier.value);
+			let func = this.scope.getFunction(expression.identifier.value);
 			if (func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax

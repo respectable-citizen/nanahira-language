@@ -30,7 +30,7 @@ class StatementGenerator {
 
 	generateBlock(block) {
 		let originalOffset = this.assembly.stackPointerOffset;
-        for (let statement of block) this.handleError(this.generateStatement, statement); 
+        	for (let statement of block) this.handleError(this.generateStatement, statement); 
 		let newOffset = this.assembly.stackPointerOffset;
     
 		//Move stack pointer back to original location (deallocate locals in block)

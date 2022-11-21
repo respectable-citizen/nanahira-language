@@ -1,13 +1,10 @@
 import stdlib;
 
 uint8 main() {
-	uint8 num = 5;
-	uint8* numptr = &num;
-	
-	uint8[] text = "Number: 0\n";
-	text[8] = *numptr + 48;
+	uint8* nums = { 1, 2, 3 };
 
-	print(text);
+	uint64* ptr = malloc(10);
+	asm("mov byte [rax], 1");
 
-	return *numptr;
+	return nums[1];
 }

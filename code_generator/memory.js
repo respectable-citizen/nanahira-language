@@ -27,7 +27,7 @@ class Memory {
 	}
 
 	getOperationSize(dataType) {
-		let dataTypeSizeBits = this.getSizeFromDataType(dataType);
+		let dataTypeSizeBits = this.getSizeOfDataTypeElement(dataType);
 		
 		let operationSize;
 		if (dataTypeSizeBits == 8) operationSize = "byte";
@@ -56,7 +56,7 @@ class Memory {
 	locationToRegisterName(loc) {
 		if (loc.type != "register") throw "Location type is not register.";
 
-		let dataTypeSizeBits = this.getSizeFromDataType(loc.dataType);
+		let dataTypeSizeBits = this.getSizeOfDataType(loc.dataType);
 		if (dataTypeSizeBits != 8 && dataTypeSizeBits != 16 && dataTypeSizeBits != 32 && dataTypeSizeBits != 64) throw "Data type can not fit exactly in a register.";
 
 		if (loc.loc == "a" || loc.loc == "b" || loc.loc == "c" || loc.loc == "d") {
@@ -115,8 +115,8 @@ class Memory {
 		];
 		if (castableIntTypes.includes(requiredDataType.identifier.value) && castableIntTypes.includes(currentDataType.identifier.value)) {
 			//Integer typecasting
-			let requiredBitSize = this.getSizeFromDataType(requiredDataType);
-			let currentBitSize = this.getSizeFromDataType(currentDataType);
+			let requiredBitSize = this.getSizeOfDataTypeElement(requiredDataType);
+			let currentBitSize = this.getSizeOfDataTypeElement(currentDataType);
 				
 			//if (requiredBitSize >= currentBitSize) return true;
 			
@@ -128,19 +128,23 @@ class Memory {
 		return false;
 	}
 
-	//Returns size in bits of a given data type
-	getSizeFromDataType(dataType, ignoreArray = false) {
-		if (!ignoreArray && dataType.isArray) return 64; //Arrays are stored as pointers so they are 64 bits
-		if (dataType.pointer) return 64; //Pointers are memory addresses, so 64 bits
+	getSizeOfDataTypeElement(dataType) {
+		let identifier = dataType.identifier.value;
 
-		dataType = dataType.identifier.value;
-
-		if (dataType == "uint8" || dataType == "int8") return 8;
-		if (dataType == "uint16" || dataType == "int16") return 16;
-		if (dataType == "uint32" || dataType == "int32") return 32;
-		if (dataType == "uint64" || dataType == "int64") return 64;
+		if (identifier == "uint8" || identifier == "int8") return 8;
+		if (identifier == "uint16" || identifier == "int16") return 16;
+		if (identifier == "uint32" || identifier == "int32") return 32;
+		if (identifier == "uint64" || identifier == "int64") return 64;
 
 		throw `Cannot determine size of data type "${dataType}"`;
+	}
+
+	//Returns size in bits of a given data type
+	getSizeOfDataType(dataType, index = null) {
+		if (dataType.isArray && !index) return 64; //Arrays are stored as pointers so they are 64 bits
+		if (dataType.pointer && !index) return 64; //Pointers are memory addresses, so 64 bits
+
+		return this.getSizeOfDataTypeElement(dataType);
 	}
 
 	//Generates corresponding assembly code that represents the location of some data (registers/memory/stack)
@@ -148,7 +152,7 @@ class Memory {
 		let name;
 
 		if (loc.type == "register") {
-			let bytesPerElement = this.getSizeFromDataType(loc.dataType, true) / 8;
+			let bytesPerElement = this.getSizeOfDataTypeElement(loc.dataType, true) / 8;
 			
 			let memoryOffset = "";
 			if (typeof loc.index == "object") {
@@ -213,8 +217,8 @@ class Memory {
 			destinationLocation.dataType.identifier.value = "uint64";
 		}
 
-		let sourceSizeBits = this.getSizeFromDataType(sourceLocation.dataType);
-		let destinationSizeBits = this.getSizeFromDataType(destinationLocation.dataType);
+		let sourceSizeBits = this.getSizeOfDataType(sourceLocation.dataType, sourceLocation.index);
+		let destinationSizeBits = this.getSizeOfDataType(destinationLocation.dataType, destinationLocation.index);
 		if (zeroExtend && instruction == "mov" && sourceSizeBits != 64 && destinationSizeBits > sourceSizeBits) {
 			if (destinationSizeBits == 64 && sourceSizeBits == 32) {
 				destinationLocation.dataType.identifier.value = "uint32";
@@ -250,8 +254,8 @@ class Memory {
 		let registerLocation = new Location("register", this.allocateRegister(), {
 			identifier: {value: "uint64"} //Move location into full 64 bits of register so we don't leave some of the old value in the register
 		});
-		registerLocation.dataType = loc.dataType;
 		this.locationMove(registerLocation, loc, dereference, true); //zeroExtend = true
+		registerLocation.dataType = loc.dataType;
 		
 		return registerLocation;
 	}
@@ -370,8 +374,8 @@ class Memory {
 
 	//Allocates array on the stack
 	allocateArrayStack(name, dataType, values) {
-		let dataTypeSizeBits = this.getSizeFromDataType(dataType);
-		let arraySizeBytes = (dataTypeSizeBits / 8) * values.length;
+		let elementSizeBits = this.getSizeOfDataTypeElement(dataType);
+		let arraySizeBytes = (elementSizeBits / 8) * values.length;
 
 		let operationSize = this.getOperationSize(dataType);
 
@@ -390,7 +394,7 @@ class Memory {
 	}
 
 	allocateArrayBSS(name, dataType) {
-		this.allocateBSS(name, this.getSizeFromDataType(dataType) / 8 * dataType.arraySize.value);
+		this.allocateBSS(name, this.getSizeOfDataTypeElement(dataType) / 8 * dataType.arraySize.value);
 		
 		return new Location("memory", name, dataType);
 	}
@@ -398,7 +402,7 @@ class Memory {
 	allocateStackSpace(dataType) {
 		let bytes;
 		if (dataType.isArray) {
-			bytes = dataType.arraySize.value * (this.getSizeFromDataType(dataType) / 8);
+			bytes = dataType.arraySize.value * (this.getSizeOfDataTypeElement(dataType) / 8);
 		} else {
 			bytes = this.getSizeFromDataType(dataType) / 8;
 		}

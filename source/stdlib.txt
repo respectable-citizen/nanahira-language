@@ -20,3 +20,16 @@ void print(uint8[] str) {
 	
 	return;
 }
+
+uint64* malloc(uint64 bytes) {
+	asm("mov rax, 9");
+	asm("mov rdi, 0");
+	asm("mov rsi, r8");
+	asm("mov rdx, 3");
+	asm("mov r10, 34");
+	asm("mov r8d, -1");
+	asm("mov r9, 0");
+	asm("syscall");
+
+	return;
+}
