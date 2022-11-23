@@ -97,7 +97,7 @@ class Memory {
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
-		if (requiredDataType.identifier.value == currentDataType.identifier.value && requiredDataType.pointer == currentDataType.pointer) return true; //Types are already the same, no need to cast
+		if (requiredDataType.identifier.value == currentDataType.identifier.value || requiredDataType.pointer == currentDataType.pointer) return true; //Types are already the same, no need to cast
 
 		//Expression data type and variable data type do not match, can we implicitly typecast?
 		let castableIntTypes = [
@@ -135,6 +135,7 @@ class Memory {
 		if (identifier == "uint16" || identifier == "int16") return 16;
 		if (identifier == "uint32" || identifier == "int32") return 32;
 		if (identifier == "uint64" || identifier == "int64") return 64;
+		if (identifier == "void") return 0;
 
 		throw `Cannot determine size of data type "${dataType}"`;
 	}

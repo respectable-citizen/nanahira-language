@@ -40,4 +40,8 @@ module.exports = [
 		name: "uint64",
 		size: 64
 	},
+	{
+		name: "void",
+		size: 0
+	}
 ];
