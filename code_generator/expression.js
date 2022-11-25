@@ -74,8 +74,7 @@ class ExpressionGenerator {
 			}
 
 			let canImplicitlyTypecast = this.memory.implicitlyTypecast(bigger.dataType, smaller.dataType);
-			if (!canImplicitlyTypecast) throw new Error.Generator(`Cannot perform binary operation on values of type "${leftLocation.dataType.identifier.value}" and "${rightLocation.dataType.identifier.value}"`, expression.start);
-			
+			if (!canImplicitlyTypecast) throw new Error.Generator(`Cannot perform binary operation on values of type "${leftLocation.dataType.identifier.value}" and "${rightLocation.dataType.identifier.value}"`, expression.start);	
 
 
 			let leftRegister = this.memory.retrieveFromLocation(leftLocation);
@@ -207,7 +206,7 @@ class ExpressionGenerator {
 			throw `Cannot currently handle operator "${expression.operator}"`;
 		} else if (expression.type == Nodes.CALL_EXPRESSION) {
 			let func = this.scope.getFunction(expression.identifier.value);
-			if (func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
+			if (expression.identifier.value != "vararg" && func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
 		} else if (expression.type == Nodes.ARRAY) {	
@@ -278,38 +277,66 @@ class ExpressionGenerator {
 		//this.sizeRegisterToDataType(variable.loc.loc, variable.dataType);    
     }
 
+	generateArgument(argument) {
+		if (argument.type == Nodes.VARIABLE) {
+			return this.generateExpression(argument);
+		} else if (argument.type == Nodes.CALL_EXPRESSION) {
+			return this.generateCallExpression(argument);
+		} else if (argument.type == Nodes.INTEGER_LITERAL) {
+			return this.generateExpression(argument);
+		} else if (argument.type == Nodes.STRING_LITERAL) {
+			return this.generateExpression(argument);
+		} else {
+			throw `Cannot use ${argument.type} as function argument`;
+		}
+	}
+
 	generateCallExpression(statement) {
 		if (statement.identifier.value == "asm") return this.generateASMCall(statement);
+		if (statement.identifier.value == "vararg") return this.generateVarargCall(statement);
 		//if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
 		let func = this.scope.getFunction(statement.identifier.value);
 		if (!func) throw new Error.Generator(`Cannot call function "${statement.identifier.value}" because it does not exist.`, statement.identifier.start);
 		if (func.external) this.assembly.makeExtern(func.identifier.value);
 
+		if (!func.parameters.varArgs && func.parameters.parameters.length != statement.args.length) throw new Error.Generator(`Function "${statement.identifier.value}" takes ${func.parameters.parameters.length} arguments but ${statement.args.length} were provided.`, statement.identifier.end + 1);
+	
 		let argumentLocations = [];
+		
+		//varargs have to be pushed to the stack first because the function doesn't know how many there are, meaning if they came before the rest of the arguments it wouldn't know where the "static" arguments start
+		//also need to be pushed in reverse order so that the first vararg is closest to the base pointer
+		let varArgCount = statement.args.length - func.parameters.parameters.length;
+		if (func.parameters.varArgs) {
+			for (let i = varArgCount - 1; i >= 0; i--) {
+				let vararg = statement.args[func.parameters.parameters.length + i];
+				let varargLocation = this.generateArgument(vararg);
 
-		for (let argument of statement.args) {
-			let argumentLocation;
-
-			if (argument.type == Nodes.VARIABLE) {
-				argumentLocation = this.generateExpression(argument);
-			} else if (argument.type == Nodes.CALL_EXPRESSION) {
-				argumentLocation = this.generateCallExpression(argument);
-			} else if (argument.type == Nodes.INTEGER_LITERAL) {
-				argumentLocation = this.generateExpression(argument);
-			} else if (argument.type == Nodes.STRING_LITERAL) {
-				argumentLocation = this.generateExpression(argument);
-			} else {
-				throw `Cannot use ${argument.type} as function argument`;
-			}
+				//All arguments are passed as 64-bit numbers, change the data type
+				varargLocation.dataType.identifier.value = "uint64";
 			
+				argumentLocations.push(varargLocation);
+			}
+		}
+
+		//handle "static" arguments
+		for (let argumentIndex = 0; argumentIndex < func.parameters.parameters.length; argumentIndex++) {
+			let argument = statement.args[argumentIndex];
+			let argumentLocation = this.generateArgument(argument);	
+
+			if (!func.parameters.varArgs) {
+				let canImplicitlyTypecast = this.memory.implicitlyTypecast(func.parameters.parameters[argumentIndex].dataType, argumentLocation.dataType);
+				if (!canImplicitlyTypecast) throw new Error.Generator(`Function argument must be "${this.memory.dataTypeToText(func.parameters.parameters[argumentIndex].dataType)}" but expression of type "${this.memory.dataTypeToText(argumentLocation.dataType)}" was given`, argument.value.start);
+			}
+
+
 			//All arguments are passed as 64-bit numbers, change the data type
 			argumentLocation.dataType.identifier.value = "uint64";
 			
 			argumentLocations.push(argumentLocation);
 			//this.assembly.addInstruction(`push ${this.memory.retrieveFromLocation(argumentLocation)}`);
 		}
-		
+
 		let usedRegisters = this.memory.saveRegisters(); //Push registers onto the stack
 
 		for (let argumentLocation of argumentLocations) {
@@ -318,6 +345,10 @@ class ExpressionGenerator {
 		}
 
 		this.assembly.addInstruction(`call ${statement.identifier.value}`);
+
+		//Remove varargs from stack
+		this.assembly.addInstruction(`add rsp, ${varArgCount * 8}`);
+
 		this.memory.loadRegisters(usedRegisters);
 
 		return new Location("register", "a", func.returnType); //rax is the designated return register
@@ -339,6 +370,20 @@ class ExpressionGenerator {
 		this.memory.moveLocationIntoRegister("rsi", this.generateExpression(statement.args[2]));
 		this.assembly.addInstruction(`mov rdx, ${statement.args[3].value.value}`);
 		this.assembly.addInstruction(`syscall`);
+	}
+
+	generateVarargCall(statement) {
+		if (statement.args.length != 1) throw new Error.Generator("vararg() takes 1 argument", statement.identifier.end);
+
+		let argumentLocation = this.generateExpression(statement.args[0]);
+		if (argumentLocation.type != "register" ||! (["uint8", "uint16", "uint32", "uint64", "int8", "int16", "int32", "int64"]).includes(argumentLocation.dataType.identifier.value)) throw "argument to vararg must be integer stored in register";
+		if (this.assembly.currentFunction.parameters.parameters.length) this.assembly.addInstruction(`add ${this.memory.retrieveFromLocation(argumentLocation)}, ${this.assembly.currentFunction.parameters.parameters.length}`);
+		argumentLocation.dataType.identifier.value = "uint64";
+
+		let registerLocation = new Location("register", this.memory.allocateRegister(), "uint64");
+		this.assembly.addInstruction(`mov ${this.memory.retrieveFromLocation(registerLocation)}, [rbp + (${this.memory.retrieveFromLocation(argumentLocation)} * 8) + 16]`);
+				
+		return registerLocation;
 	}
 }
 

@@ -43,11 +43,15 @@ class Lexer {
 
     peek() {
         if (this.atEnd()) return "\0"; //We are at the end of the file, it actually doesn't matter what we return here as long as nothing in the lexer matches it
-        return this.code[this.pos];
+        return this.peekOffset(0);
     }
     
     peekNext() {
-        return this.code[this.pos + 1];
+    	return this.peekOffset(1);
+	}
+
+	peekOffset(offset) {
+        return this.code[this.pos + offset];
     }
 
     advance() {
@@ -286,7 +290,6 @@ class Lexer {
                     this.addToken({
                         type: Tokens.AMPERSAND_AMPERSAND
                     });
-
                 } else {
                     this.addToken({
                         type: Tokens.AMPERSAND
@@ -297,7 +300,14 @@ class Lexer {
                 this.addToken({
                     type: Tokens.COMMA
                 });
-            } else {
+			} else if (this.peek() == "." && this.peekNext() == "." && this.peekOffset(2) == ".") {
+				this.advance();
+				this.advance();
+				this.advance();
+				this.addToken({
+                	type: Tokens.DOT_DOT_DOT
+                });
+			} else {
                 if (this.isAlpha(this.peek())) {
                     let identifier = this.get();
                     

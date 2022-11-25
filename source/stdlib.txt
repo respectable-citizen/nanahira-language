@@ -21,7 +21,12 @@ void print(uint8[] str) {
 	return;
 }
 
-uint64* malloc(uint64 bytes) {
+uint64 test(...) {
+	uint64 value = vararg(1);
+	return value;
+}
+
+void* malloc(uint64 bytes) {
 	asm("mov rax, 9");
 	asm("mov rdi, 0");
 	asm("mov rsi, r8");

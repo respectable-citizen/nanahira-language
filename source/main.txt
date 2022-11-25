@@ -1,10 +1,5 @@
 import stdlib;
 
 uint8 main() {
-	uint8* nums = { 1, 2, 3 };
-
-	uint64* ptr = malloc(10);
-	asm("mov byte [rax], 1");
-
-	return nums[1];
+	return test(5, 6);
 }

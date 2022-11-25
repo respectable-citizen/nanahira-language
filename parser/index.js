@@ -8,7 +8,7 @@ program := importStatement* declaration*
 
 declaration := functionDeclaration | variableDeclaration
 
-parameters := IDENTIFIER IDENTIFIER ("," IDENTIFIER IDENTIFIER)*
+parameters := IDENTIFIER IDENTIFIER ("," IDENTIFIER IDENTIFIER)* [ "," "..." ]
 arguments = expression ("," expression)*
 
 block := "{" (variableDeclaration | statement)* "}"
@@ -188,7 +188,10 @@ class Parser {
         let returnType = this.parseDataType();
         let identifier = this.expect(Tokens.IDENTIFIER);
         this.expect(Tokens.LEFT_PAREN);
-        let parameters = [];
+        let parameters = {
+			parameters: [],
+			varArgs: false
+		};
         if (this.peek().type != Tokens.RIGHT_PAREN) parameters = this.parseParameters();
         this.expect(Tokens.RIGHT_PAREN);
 		
@@ -407,8 +410,9 @@ class Parser {
                 expectComma = true;
             }
 
+            if (this.peek().type == Tokens.DOT_DOT_DOT) break;
             let dataType = this.parseDataType();
-            let identifier = this.expect(Tokens.IDENTIFIER);
+			let identifier = this.expect(Tokens.IDENTIFIER);
 
             parameters.push({
                 type: Nodes.PARAMETER,
@@ -416,8 +420,14 @@ class Parser {
                 identifier
             });
         }
+        
+		let varArgs = false;
+		if (this.match(Tokens.DOT_DOT_DOT)) varArgs = true;
 
-        return parameters;
+        return {
+			parameters,
+			varArgs
+		};
     }
 
     parseAssignmentExpression() {

@@ -15,9 +15,7 @@ class Location {
 
 	//Constructor for location on the stack
 	static Stack(baseOffset, dataType) {
-		let loc = new Location("stack", null, {
-			identifier: {value: dataType}
-		});
+		let loc = new Location("stack", null, dataType);
 
 		loc.baseOffset = baseOffset;
 		

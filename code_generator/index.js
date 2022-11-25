@@ -38,6 +38,7 @@ class CodeGenerator {
 		this.assembly.makeGlobal(func.identifier.value); //All functions are accessible from every file, probably a bad idea but works for now
 
 		if (func.identifier.value == "asm") throw new Error.Generator(`Function name "asm" is reserved`, func.identifier.start);
+		if (func.identifier.value == "vararg") throw new Error.Generator(`Function name "vararg" is reserved`, func.identifier.start);
 
 		//Check if function should be returning something
 		if (this.assembly.currentFunction.returnType.identifier.value != "void") {
@@ -52,8 +53,8 @@ class CodeGenerator {
 		this.assembly.addInstruction(`mov rbp, rsp`); //Use current stack pointer as new base pointer
 
 		//Handle parameters
-		for (let parameterIndex = this.assembly.currentFunction.parameters.length - 1; parameterIndex >= 0; parameterIndex--) {
-			let parameter = this.assembly.currentFunction.parameters[parameterIndex];
+		for (let parameterIndex = this.assembly.currentFunction.parameters.parameters.length - 1; parameterIndex >= 0; parameterIndex--) {
+			let parameter = this.assembly.currentFunction.parameters.parameters[parameterIndex];
 
 			let baseOffset = 16 + (8 * parameterIndex); //Plus 16 to skip old base pointer and return address. 8 because function arguments are currently passed as 64-bits (8 bytes) no matter the data type
 			let argumentStackLocation = Location.Stack(baseOffset, "uint64"); //Parameters are passed on the stack as 64 bits

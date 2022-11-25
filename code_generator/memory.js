@@ -7,7 +7,7 @@ class Memory {
 		this.assembly = assembly;
 
         this.registers = {
-            //"a": true,  Reserved for div instruction and returning up to 64 bits from functions
+            //"a": true,  Reserved for div and returning up to 64 bits from functions
             //"b": true,  Reserved for effective addressing
             "c": true,
             //"d": true,  Reserved for div instruction
@@ -24,6 +24,10 @@ class Memory {
             "14":  true,
             "15":  true,
         };
+	}
+
+	dataTypeToText(dataType) {
+		return dataType.identifier.value + "*".repeat(dataType.pointer);
 	}
 
 	getOperationSize(dataType) {
@@ -97,7 +101,9 @@ class Memory {
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
-		if (requiredDataType.identifier.value == currentDataType.identifier.value || requiredDataType.pointer == currentDataType.pointer) return true; //Types are already the same, no need to cast
+		if (requiredDataType.identifier.value == currentDataType.identifier.value && requiredDataType.pointer == currentDataType.pointer) return true; //Types are already the same, no need to cast
+
+		if ((requiredDataType.pointer ? requiredDataType.pointer : 0) != (currentDataType.pointer ? currentDataType.pointer : 0)) return false;
 
 		//Expression data type and variable data type do not match, can we implicitly typecast?
 		let castableIntTypes = [
@@ -153,7 +159,7 @@ class Memory {
 		let name;
 
 		if (loc.type == "register") {
-			let bytesPerElement = this.getSizeOfDataTypeElement(loc.dataType, true) / 8;
+			let bytesPerElement = this.getSizeOfDataTypeElement(loc.dataType) / 8;
 			
 			let memoryOffset = "";
 			if (typeof loc.index == "object") {
@@ -391,7 +397,10 @@ class Memory {
 			this.assembly.addInstruction(`mov ${operationSize} [rsp${offset}], ${values[i]}`);
 		}
 
-		return Location.Stack(this.assembly.stackPointerOffset, dataType.identifier.value);
+		let dataTypeArray = structuredClone(dataType);
+		dataTypeArray.pointer = 1;
+		
+		return Location.Stack(this.assembly.stackPointerOffset, dataTypeArray);
 	}
 
 	allocateArrayBSS(name, dataType) {
@@ -409,7 +418,11 @@ class Memory {
 		}
 		
 		this.assembly.moveStackPointer(-bytes);
-		return Location.Stack(this.assembly.stackPointerOffset, dataType.identifier.value);
+
+		let dataTypeArray = structuredClone(dataType);
+		dataTypeArray.pointer = 1;
+		
+		return Location.Stack(this.assembly.stackPointerOffset, dataTypeArray);
 	}
 }
 
