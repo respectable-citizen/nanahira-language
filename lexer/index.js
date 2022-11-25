@@ -148,6 +148,17 @@ class Lexer {
 					type: Tokens.STRING_LITERAL,
 					value
 				});
+			} else if (this.peek() == "'" && this.peekOffset(2) == "'") {
+				this.advance();
+
+				let value = this.get();
+
+				this.advance();
+
+				this.addToken({
+					type: Tokens.CHARACTER_LITERAL,
+					value
+				});
 			}
 
             //Start of operator handling

@@ -43,5 +43,9 @@ module.exports = [
 	{
 		name: "void",
 		size: 0
+	},
+	{
+		name: "char",
+		size: 8
 	}
 ];

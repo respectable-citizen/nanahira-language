@@ -101,14 +101,18 @@ class Memory {
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
+		requiredDataType.pointer = requiredDataType.pointer ? requiredDataType.pointer : 0;
+		currentDataType.pointer = currentDataType.pointer ? currentDataType.pointer : 0;
+
 		if (requiredDataType.identifier.value == currentDataType.identifier.value && requiredDataType.pointer == currentDataType.pointer) return true; //Types are already the same, no need to cast
 
-		if ((requiredDataType.pointer ? requiredDataType.pointer : 0) != (currentDataType.pointer ? currentDataType.pointer : 0)) return false;
+		if (requiredDataType.pointer != currentDataType.pointer) return false;
 
 		//Expression data type and variable data type do not match, can we implicitly typecast?
 		let castableIntTypes = [
 			"int8",
 			"uint8",
+			"char",
 
 			"int16",
 			"uint16",
@@ -117,7 +121,7 @@ class Memory {
 			"uint32",
 
 			"int64",
-			"uint64"
+			"uint64",
 		];
 		if (castableIntTypes.includes(requiredDataType.identifier.value) && castableIntTypes.includes(currentDataType.identifier.value)) {
 			//Integer typecasting
@@ -137,7 +141,7 @@ class Memory {
 	getSizeOfDataTypeElement(dataType) {
 		let identifier = dataType.identifier.value;
 
-		if (identifier == "uint8" || identifier == "int8") return 8;
+		if (identifier == "uint8" || identifier == "int8" || identifier == "char") return 8;
 		if (identifier == "uint16" || identifier == "int16") return 16;
 		if (identifier == "uint32" || identifier == "int32") return 32;
 		if (identifier == "uint64" || identifier == "int64") return 64;
@@ -273,6 +277,16 @@ class Memory {
 		});
 		this.assembly.addInstruction(`mov ${this.retrieveFromLocation(registerLocation)}, ${integer.toString()}`);
 		registerLocation.dataType.identifier.value = this.decideIntegerDataType(integer); //Set actual data type of integer on location
+
+		return registerLocation;
+	}
+
+	moveCharIntoARegister(charCode) {
+		let registerLocation = new Location("register", this.allocateRegister(), {
+			identifier: {value: "uint64"} //Move integer into full 64 bits of register
+		});
+		this.assembly.addInstruction(`mov ${this.retrieveFromLocation(registerLocation)}, ${charCode.toString()}`);
+		registerLocation.dataType.identifier.value = "char"; //Set actual data type of integer on location
 
 		return registerLocation;
 	}

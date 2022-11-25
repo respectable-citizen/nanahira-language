@@ -237,6 +237,8 @@ class ExpressionGenerator {
 			values.push(0); //Strings are null terminated
 			
 			return this.memory.allocateArrayStack(arrayName, arrayDataType, values);
+		} else if (expression.type == Nodes.CHARACTER_LITERAL) {
+			return this.memory.moveCharIntoARegister(expression.value.value.charCodeAt(0));
 		}
 
 		throw `Cannot currently handle expression "${expression.type}".`;

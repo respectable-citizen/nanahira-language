@@ -20,7 +20,7 @@ comparison := term ((">" | ">=" | "<" | "<=") term )*
 term := factor (( "-" | "+" ) factor)*
 factor := unary (( "/" | "*" | "%" ) unary)*
 unary := (( "!" | "-" | "&" | "*") unary) | primary
-primary := NUMBER | array | "(" expression ")" | IDENTIFIER[ arrayIndex ] | callExpression
+primary := NUMBER | STRING | CHARACTER | array | "(" expression ")" | IDENTIFIER[ arrayIndex ] | callExpression
 
 array = "{" [ NUMBER ("," NUMBER) ] "}"
 arrayIndex = "[" expression "]"
@@ -604,6 +604,11 @@ class Parser {
             type: Nodes.STRING_LITERAL,
             value: this.previous()
         };
+
+		if (this.match(Tokens.CHARACTER_LITERAL)) return {
+			type: Nodes.CHARACTER_LITERAL,
+			value: this.previous()
+		};
 
 		if (this.match(Tokens.LEFT_CURLY_BRACE)) {
 			let values = [];
