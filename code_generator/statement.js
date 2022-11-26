@@ -157,13 +157,20 @@ class StatementGenerator {
 	
 		//Label that if jumped to, will skip the if block
 		let skipLabel = "if_skip_" + this.assembly.generateLabel();
+		let elseEndLabel = "else_end__" + this.assembly.generateLabel();
 
 		let register = this.memory.moveLocationIntoARegister(loc);
 		this.assembly.addInstruction(`cmp ${this.memory.retrieveFromLocation(register)}, 1`);
 		this.memory.freeRegister(register);
 		this.assembly.addInstruction(`jne ${skipLabel}`);
 		this.generateBlock(statement.block);
+		if (statement.elseBlock) this.assembly.addInstruction(`jmp ${elseEndLabel}`);
 		this.assembly.addInstruction(`${skipLabel}:`);
+		if (statement.elseBlock) {
+			this.generateBlock(statement.elseBlock);
+			this.assembly.addInstruction(`${elseEndLabel}:`);
+		}
+
 	}
 
 	generateWhileStatement(statement) {

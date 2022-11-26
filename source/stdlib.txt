@@ -1,5 +1,4 @@
 //the code here is like, really weird due to the current limitations of the language
-//else block coming soon
 
 void* malloc(uint64 bytes) {
 	asm("mov rax, 9");
@@ -75,18 +74,13 @@ void printf(char* format, ...) {
 			}
 
 			formatIndex++;
-		}
-
-		if (format[i] == '%') {
-			isFormat = 1;
-		}
-	
-		if (isFormat == 0) {
-			print_character(format[i]);
-		}
-
-		if (format[i] != '%') {
 			isFormat = 0;
+		} else {
+			if (format[i] == '%') {
+				isFormat = 1;
+			} else {
+				print_character(format[i]);
+			}
 		}
 	}
 

@@ -314,6 +314,8 @@ class ExpressionGenerator {
 			return this.generateExpression(argument);
 		} else if (argument.type == Nodes.STRING_LITERAL) {
 			return this.generateExpression(argument);
+		} else if (argument.type == Nodes.CHARACTER_LITERAL) {
+			return this.generateExpression(argument);
 		} else if (argument.type == Nodes.BINARY_EXPRESSION) {
 			return this.generateExpression(argument);
 		} else {

@@ -6,7 +6,7 @@ maybe you're thinking "a compiler, written in javascript? really? are you stupid
 features:
 * functions
 * arrays (currently limited to 1 dimension)
-* basic control flow (if, for, while)
+* basic control flow (if/else, for, while)
 * importing different files
 * varargs
 * pointers and limited arithmetic with them

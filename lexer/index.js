@@ -335,6 +335,10 @@ class Lexer {
                         this.addToken({
                             type: Tokens.KEYWORD_IF
                         });
+					} else if (identifier == "else") {
+						this.addToken({
+                            type: Tokens.KEYWORD_ELSE
+                        });
 					} else if (identifier == "while") {
 						this.addToken({
                             type: Tokens.KEYWORD_WHILE

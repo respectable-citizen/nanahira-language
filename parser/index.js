@@ -40,7 +40,7 @@ statement := expressionStatement | returnStatement | ifStatement | whileStatemen
 
 expressionStatement := (assignmentExpression | callExpression) ";"
 returnStatement := "return" [expression] ";"
-ifStatement := "if" "(" expression ")" block
+ifStatement := "if" "(" expression ")" block [ "else" block ]
 whileStatement = "while" "(" expression ")" block
 forStatement = "for" "(" variableDeclaration expression ";" assignmentExpression ")" block
 importStatement = "import" identifier ";"
@@ -315,11 +315,17 @@ class Parser {
 		this.expect(Tokens.RIGHT_PAREN);
 	
 		let block = this.parseBlock();
+		
+		let elseBlock;
+		if (this.match(Tokens.KEYWORD_ELSE)) {
+			elseBlock = this.parseBlock();
+		}
 
 		return {
 			type: Nodes.IF_STATEMENT,
 			expression,
-			block
+			block,
+			elseBlock
 		};
 	}
 	
