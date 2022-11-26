@@ -205,16 +205,20 @@ class ExpressionGenerator {
 				let variable = this.scope.getVariable(expression.expression.value.value);
 				if (!variable) throw new Error.Generator(`Variable "${expression.expression.value.value}" does not exist`, expression.expression.value.start);
 				
-				let loc;
+				let loc = structuredClone(variable.loc);
 				if (variable.loc.type == "register") {
-					//Registers do not have a memory address, so we have to move the variable into memory first
-					loc = this.memory.allocateStackSpace(variable.loc.dataType);
-					this.memory.locationMove(loc, variable.loc);
-				} else {
-					loc = structuredClone(variable.loc);
+					if (variable.loc.dataType.pointer && expression.expression.arrayIndex) {
+						this.indexIntoLocation(loc, expression.expression.arrayIndex);
+						let registerLocation = this.memory.moveLocationIntoARegister(loc, true);
+						return registerLocation;
+					} else {
+						//Registers do not have a memory address, so we have to move the variable into memory first
+						loc = this.memory.allocateStackSpace(variable.loc.dataType);
+						this.memory.locationMove(loc, variable.loc);
+					}
 				}
 
-				loc.dataType.pointer = 1; //Location is a single-level pointer
+				loc.dataType.pointer++;
 				return loc;
 			} else if (expression.operator == Tokens.STAR) {
 				//Dereference
@@ -322,6 +326,8 @@ class ExpressionGenerator {
 		} else if (argument.type == Nodes.CHARACTER_LITERAL) {
 			return this.generateExpression(argument);
 		} else if (argument.type == Nodes.BINARY_EXPRESSION) {
+			return this.generateExpression(argument);
+		} else if (argument.type == Nodes.UNARY_EXPRESSION) {
 			return this.generateExpression(argument);
 		} else {
 			throw `Cannot use ${argument.type} as function argument`;

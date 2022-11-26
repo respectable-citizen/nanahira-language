@@ -63,7 +63,7 @@ class StatementGenerator {
 			let registerCount = this.memory.getUsedRegisters().length;
 			let variableCount = Object.keys(this.scope.getFunction("printf").variables).length;
 			
-			if (registerCount != variableCount) {
+			if (registerCount > variableCount) {
 				console.log(registerCount, variableCount, statement.line);
 				throw "Allocated registers and variables in scope do not match.";
 			}

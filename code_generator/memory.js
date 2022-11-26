@@ -221,15 +221,19 @@ class Memory {
 	*/
 
 	//Performs move on locations, not limited to just registers (stack, memory, etc)
-	locationMove(destinationLocation, sourceLocation, dereference = null, zeroExtend = false) {
-		let instruction = "mov";
-		if (sourceLocation.type == "stack" || sourceLocation.type == "memory") {
-			//Array, choose whether to dereference based on if index is present
-			if (sourceLocation.index === undefined) instruction = "lea";
+	locationMove(destinationLocation, sourceLocation, dereference = false, zeroExtend = false) {
+		let instruction;
+
+		if (dereference) {
+			instruction = "mov";
+		} else {
+			if (this.retrieveFromLocation(sourceLocation).startsWith("[")) {
+				instruction = "lea";
+			} else {
+				instruction = "mov";
+			}
 		}
-
-		if (dereference) instruction = "mov";
-
+		
 		if (instruction == "lea") {
 			//If we are getting address rather than dereferencing, we need to use all 64 bits
 			destinationLocation.dataType.identifier.value = "uint64";
@@ -245,7 +249,7 @@ class Memory {
 			sourceSizeBits = this.getSizeOfDataType(sourceLocation.dataType);
 			destinationSizeBits = this.getSizeOfDataType(destinationLocation.dataType);
 		}
-
+	
 		if (zeroExtend && instruction == "mov" && sourceSizeBits != 64 && destinationSizeBits > sourceSizeBits) {
 			if (destinationSizeBits == 64 && sourceSizeBits == 32) {
 				destinationLocation.dataType.identifier.value = "uint32";
@@ -275,7 +279,7 @@ class Memory {
 	}
 	
 	//Moves location into a newly allocated register and returns the register, if the location is already a register nothing will happen unless force is true
-	moveLocationIntoARegister(loc, force = false, dereference = null) {
+	moveLocationIntoARegister(loc, force = false, dereference = false) {
 		if (loc.type == "register" && !force) return loc;
 
 		let registerLocation = new Location("register", this.allocateRegister(), {
