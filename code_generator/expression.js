@@ -115,11 +115,16 @@ class ExpressionGenerator {
 
 				return new Location("register", leftLocation.loc, "uint64");
 			} else if (expression.operator == Tokens.STAR) {
-				this.assembly.addInstruction(`imul ${leftRegister}, ${rightRegister}`);
+				//Ensure left value is in RAX
+				if (leftRegister != "rax") {
+					this.memory.moveLocationIntoRegister("a", leftLocation);
+					this.memory.freeRegister(leftLocation);
+				}
 
+				this.assembly.addInstruction(`mul ${rightRegister}`);
 				this.memory.freeRegister(rightLocation);
 
-				return new Location("register", leftLocation.loc, "uint64");
+				return new Location("register", "a", "uint64");
 			} else if (expression.operator == Tokens.SLASH || expression.operator == Tokens.PERCENT) {
 				//Ensure dividend is in RAX
 				if (leftRegister != "rax") {
@@ -129,7 +134,7 @@ class ExpressionGenerator {
 				//Ensure RDX is 0 as it forms the high-half of the dividend
 				this.assembly.addInstruction(`mov rdx, 0`);
 
-				//In 8 bit division, the remainder goes into AH instead of RDX. We cannot address AH so instead we have to upgrade 8 bit division instead 16 bit division
+				//In 8 bit division, the remainder goes into AH instead of RDX. We cannot address AH so instead we have to upgrade 8 bit division to 16 bit division
 				if (rightLocation.dataType.identifier.value == "int8" || rightLocation.dataType.identifier.value == "uint8") {
 					rightLocation.dataType.identifier.value = rightLocation.dataType.identifier.value.replace("8", "16");
 					rightRegister = this.memory.retrieveFromLocation(rightLocation);

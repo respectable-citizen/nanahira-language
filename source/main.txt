@@ -1,9 +1,8 @@
 import stdlib;
 
 uint8 main() {
-	for (uint16 i = 1; i < 6; i++) {
-		uint16 product = i * 2;
-		printf("%d * 2 = %d\n", i, product);
+	for (uint8 i = 1; i < 6; i++) {
+		printf("%d * 2 = %d\n", i, i * 2);
 	}
 	return 0;
 }
