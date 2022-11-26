@@ -8,8 +8,10 @@ features:
 * arrays (currently limited to 1 dimension)
 * basic control flow (if, for, while)
 * importing different files
+* varargs
+* pointers and limited arithmetic with them
+* basic stdlib (printf, strlen, malloc)
 * inline asm
-* world's smallest standard library consisting of strlen and print
 
 source files go in source directory with extension .txt (dont wanna lock myself into a specific extension yet)  
 compiled asm goes into output directory  

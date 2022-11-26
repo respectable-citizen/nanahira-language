@@ -237,10 +237,11 @@ class Parser {
 		let pointer = 0; //Number of nested pointers
 		while (this.match(Tokens.STAR)) pointer++;
 
+		if (isArray) pointer++;
+
 		return {
 			type: Nodes.DATA_TYPE,
 			identifier,
-			isArray,
 			arraySize,
 			pointer
 		};

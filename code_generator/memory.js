@@ -27,7 +27,7 @@ class Memory {
 	}
 
 	dataTypeToText(dataType) {
-		return dataType.identifier.value + "*".repeat(dataType.pointer);
+		return dataType.identifier.value + "*".repeat(dataType.pointer ? dataType.pointer : (dataType.isArray ? 1 : 0));
 	}
 
 	getOperationSize(dataType) {
@@ -101,6 +101,14 @@ class Memory {
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
+	
+		if (this.assembly.currentStatement && this.assembly.currentStatement.line == 25) {
+			//console.log("HERE");
+			//console.log(currentDataType);
+			//console.log(requiredDataType);
+		}
+
+
 		requiredDataType.pointer = requiredDataType.pointer ? requiredDataType.pointer : 0;
 		currentDataType.pointer = currentDataType.pointer ? currentDataType.pointer : 0;
 
@@ -122,6 +130,8 @@ class Memory {
 
 			"int64",
 			"uint64",
+
+			"void"
 		];
 		if (castableIntTypes.includes(requiredDataType.identifier.value) && castableIntTypes.includes(currentDataType.identifier.value)) {
 			//Integer typecasting
@@ -129,9 +139,10 @@ class Memory {
 			let currentBitSize = this.getSizeOfDataTypeElement(currentDataType);
 				
 			//if (requiredBitSize >= currentBitSize) return true;
-			
+		
 			currentDataType.identifier.value = requiredDataType.identifier.value;
 			currentDataType.pointer = requiredDataType.pointer;
+
 			return true;
 		}
 
@@ -151,9 +162,9 @@ class Memory {
 	}
 
 	//Returns size in bits of a given data type
-	getSizeOfDataType(dataType, index = null) {
-		if (dataType.isArray && !index) return 64; //Arrays are stored as pointers so they are 64 bits
-		if (dataType.pointer && !index) return 64; //Pointers are memory addresses, so 64 bits
+	getSizeOfDataType(dataType) {
+		if (dataType.isArray) return 64; //Arrays are stored as pointers so they are 64 bits
+		if (dataType.pointer) return 64; //Pointers are memory addresses, so 64 bits
 
 		return this.getSizeOfDataTypeElement(dataType);
 	}
@@ -163,24 +174,32 @@ class Memory {
 		let name;
 
 		if (loc.type == "register") {
+			loc = structuredClone(loc);
+			
 			let bytesPerElement = this.getSizeOfDataTypeElement(loc.dataType) / 8;
 			
 			let memoryOffset = "";
 			if (typeof loc.index == "object") {
-				loc = structuredClone(loc);
 				loc.dataType.identifier.value = "uint64"; //Effective addressing requires use of 64 bit register names
 
 				memoryOffset = ` + ${this.retrieveFromLocation(loc.index)} * ${bytesPerElement}`;
-			} else if (loc.index) {
+			} else if (loc.index !== undefined) {
+				loc.dataType.identifier.value = "uint64"; //Effective addressing requires use of 64 bit register names
+				
 				memoryOffset = ` + ${loc.index * bytesPerElement}`;
 			}
-			
+		
+			/*if (this.assembly.currentStatement && this.assembly.currentStatement.line == 17) {
+				console.log(loc);
+				console.log(this.locationToRegisterName(loc));
+			}*/
+
 			name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
 		} else if (loc.type == "memory") {
-			let bytesPerElement = this.getSizeFromDataType(loc.dataType) / 8;
+			let bytesPerElement = this.getSizeOfDataTypeElement(loc.dataType) / 8;
 			
 			let memoryOffset = "";
-			if (loc.index) memoryOffset = ` + ${loc.index * bytesPerElement}`;
+			if (loc.index !== undefined) memoryOffset = ` + ${loc.index * bytesPerElement}`;
 
 			name = `${loc.loc}${memoryOffset}`;
 		} else if (loc.type == "stack") {
@@ -219,17 +238,31 @@ class Memory {
 		let instruction = "mov";
 		if (sourceLocation.type == "stack" || sourceLocation.type == "memory") {
 			//Array, choose whether to dereference based on if index is present
-			if (!sourceLocation.index) instruction = "lea";
+			if (sourceLocation.index === undefined) instruction = "lea";
 		}
-		if (dereference) instruction = dereference ? "mov" : "lea";
+
+		if (dereference) instruction = "mov";
 
 		if (instruction == "lea") {
 			//If we are getting address rather than dereferencing, we need to use all 64 bits
 			destinationLocation.dataType.identifier.value = "uint64";
 		}
 
-		let sourceSizeBits = this.getSizeOfDataType(sourceLocation.dataType, sourceLocation.index);
-		let destinationSizeBits = this.getSizeOfDataType(destinationLocation.dataType, destinationLocation.index);
+		let sourceSizeBits;
+		let destinationSizeBits;
+		
+		if (dereference) {
+			sourceSizeBits = this.getSizeOfDataTypeElement(sourceLocation.dataType);
+			destinationSizeBits = this.getSizeOfDataTypeElement(destinationLocation.dataType);
+		} else {
+			sourceSizeBits = this.getSizeOfDataType(sourceLocation.dataType);
+			destinationSizeBits = this.getSizeOfDataType(destinationLocation.dataType);
+		}
+
+		if (this.assembly.currentStatement && this.assembly.currentStatement.line == 25) {
+			//console.log(sourceLocation);
+		}
+
 		if (zeroExtend && instruction == "mov" && sourceSizeBits != 64 && destinationSizeBits > sourceSizeBits) {
 			if (destinationSizeBits == 64 && sourceSizeBits == 32) {
 				destinationLocation.dataType.identifier.value = "uint32";
@@ -247,6 +280,15 @@ class Memory {
 		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;
 		
 		this.assembly.addInstruction(`${instruction} ${destinationName}, ${sourceName}`);
+	
+		if (this.assembly.currentStatement && this.assembly.currentStatement.line == 25) {
+			//console.trace();
+			//console.log("MOV FINAL");
+			//console.log(`${instruction} ${destinationName}, ${sourceName}`);	
+			//console.log(destinationLocation);
+			//console.log(sourceLocation);
+			//console.log(sourceSizeBits);
+		}
 	}
 	
 	//Moves location into a specific register
@@ -291,10 +333,10 @@ class Memory {
 		return registerLocation;
 	}
 
-	pushLocation(loc, updateStackPointerOffset = true) {
+	pushLocation(loc, updateStackPointerOffset = true, free = true) {
 		let register = this.moveLocationIntoARegister(loc);
 		this.assembly.addInstruction(`push ${this.retrieveFromLocation(register)}`);
-		this.freeRegister(register);
+		if (free) this.freeRegister(register);
 
 		if (updateStackPointerOffset) this.assembly.moveStackPointerOffset(-8);
 	}
@@ -355,7 +397,7 @@ class Memory {
 	saveRegisters() {
 		let usedRegisters = this.getUsedRegisters();
 		
-		for (let register of usedRegisters) this.pushLocation(register);
+		for (let register of usedRegisters) this.pushLocation(register, true, false)
 		
 		return usedRegisters;
 	}
@@ -425,10 +467,10 @@ class Memory {
 	
 	allocateStackSpace(dataType) {
 		let bytes;
-		if (dataType.isArray) {
+		if (dataType.pointer) {
 			bytes = dataType.arraySize.value * (this.getSizeOfDataTypeElement(dataType) / 8);
 		} else {
-			bytes = this.getSizeFromDataType(dataType) / 8;
+			bytes = this.getSizeOfDataType(dataType) / 8;
 		}
 		
 		this.assembly.moveStackPointer(-bytes);
