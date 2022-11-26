@@ -30,7 +30,7 @@ class StatementGenerator {
 
 	generateBlock(block) {
 		let originalOffset = this.assembly.stackPointerOffset;
-        	for (let statement of block) this.handleError(this.generateStatement, statement); 
+        for (let statement of block) this.handleError(this.generateStatement, statement); 
 		let newOffset = this.assembly.stackPointerOffset;
     
 		//Move stack pointer back to original location (deallocate locals in block)
@@ -58,13 +58,14 @@ class StatementGenerator {
 			throw `Cannot generate statement of type ${statement.type}`;
 		}
 	
+		//Check for register leakage
 		if (this.assembly.currentFunction.identifier.value == "printf") {
 			let registerCount = this.memory.getUsedRegisters().length;
 			let variableCount = Object.keys(this.scope.getFunction("printf").variables).length;
 			
 			if (registerCount != variableCount) {
 				console.log(registerCount, variableCount, statement.line);
-				throw 1;
+				throw "Allocated registers and variables in scope do not match.";
 			}
 		}
 	}
@@ -85,19 +86,10 @@ class StatementGenerator {
         if (this.scope.getVariable(identifier)) throw new Error.Generator(`Variable "${identifier}" has already been declared`, statement);
         if (!this.scope.getDataType(statement.dataType.identifier.value)) throw new Error.Generator(`Data type "${statement.dataType.identifier.value}" does not exist.`, statement.dataType.identifier.start);
 
-		//console.log(this.memory.registers);
-		//console.log(this.scope.getFunction(this.assembly.currentFunction.identifier.value));
-
 		//Check if variable has been initialized
 		if (statement.expression) {
         	//Generate code to evaluate expression
         	let loc = this.expression.generateExpression(statement.expression);
-			
-			if (this.assembly.currentStatement.line == 25) {
-				//console.log("AT THE LINE");
-				//console.log(statement.dataType);
-				//console.log(loc.dataType);
-			}
 
 			let canImplicitlyTypecast = this.memory.implicitlyTypecast(statement.dataType, loc.dataType);
 			if (!canImplicitlyTypecast) throw new Error.Generator(`Attempt to assign expression of data type "${this.memory.dataTypeToText(loc.dataType)}" to variable of type "${this.memory.dataTypeToText(statement.dataType)}"`, statement.expression.start);
@@ -161,8 +153,6 @@ class StatementGenerator {
 	}
 	
 	generateIfStatement(statement) {
-		//console.log(this.memory.registers);
-		//console.log(this.assembly.currentStatement);
 		let loc = this.expression.generateExpression(statement.expression);
 	
 		//Label that if jumped to, will skip the if block

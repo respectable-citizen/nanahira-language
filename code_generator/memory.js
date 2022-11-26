@@ -101,14 +101,6 @@ class Memory {
 	//If types can be implicitly casted, currentDataType will be changed and function will return true
 	//Otherwise returns false
 	implicitlyTypecast(requiredDataType, currentDataType) {
-	
-		if (this.assembly.currentStatement && this.assembly.currentStatement.line == 25) {
-			//console.log("HERE");
-			//console.log(currentDataType);
-			//console.log(requiredDataType);
-		}
-
-
 		requiredDataType.pointer = requiredDataType.pointer ? requiredDataType.pointer : 0;
 		currentDataType.pointer = currentDataType.pointer ? currentDataType.pointer : 0;
 
@@ -189,11 +181,6 @@ class Memory {
 				memoryOffset = ` + ${loc.index * bytesPerElement}`;
 			}
 		
-			/*if (this.assembly.currentStatement && this.assembly.currentStatement.line == 17) {
-				console.log(loc);
-				console.log(this.locationToRegisterName(loc));
-			}*/
-
 			name = `${this.locationToRegisterName(loc)}${memoryOffset}`;
 		} else if (loc.type == "memory") {
 			let bytesPerElement = this.getSizeOfDataTypeElement(loc.dataType) / 8;
@@ -259,10 +246,6 @@ class Memory {
 			destinationSizeBits = this.getSizeOfDataType(destinationLocation.dataType);
 		}
 
-		if (this.assembly.currentStatement && this.assembly.currentStatement.line == 25) {
-			//console.log(sourceLocation);
-		}
-
 		if (zeroExtend && instruction == "mov" && sourceSizeBits != 64 && destinationSizeBits > sourceSizeBits) {
 			if (destinationSizeBits == 64 && sourceSizeBits == 32) {
 				destinationLocation.dataType.identifier.value = "uint32";
@@ -280,15 +263,6 @@ class Memory {
 		if (destinationName.startsWith("[")) destinationName = `${this.getOperationSize(destinationLocation.dataType)} ${destinationName}`;
 		
 		this.assembly.addInstruction(`${instruction} ${destinationName}, ${sourceName}`);
-	
-		if (this.assembly.currentStatement && this.assembly.currentStatement.line == 25) {
-			//console.trace();
-			//console.log("MOV FINAL");
-			//console.log(`${instruction} ${destinationName}, ${sourceName}`);	
-			//console.log(destinationLocation);
-			//console.log(sourceLocation);
-			//console.log(sourceSizeBits);
-		}
 	}
 	
 	//Moves location into a specific register

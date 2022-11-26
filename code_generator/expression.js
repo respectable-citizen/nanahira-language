@@ -140,8 +140,6 @@ class ExpressionGenerator {
 
 				return new Location("register", (expression.operator == Tokens.SLASH) ? "a" : "d", "uint64");
 			} else if (expression.operator == Tokens.GREATER || expression.operator == Tokens.LESS || expression.operator == Tokens.EQUAL_EQUAL || expression.operator == Tokens.BANG_EQUAL) {
-				//console.log(`START: ${this.memory.getUsedRegisters().length} used`);
-				//console.log(this.memory.registers);
 				let mnemonic;
 				if (expression.operator == Tokens.LESS) {
 					mnemonic = "nl";
@@ -169,11 +167,8 @@ class ExpressionGenerator {
 				this.assembly.addInstruction(`mov ${this.memory.retrieveFromLocation(resultRegister)}, 1`);
 				this.assembly.addInstruction(`${skipLabel}:`);
 
-				//console.log(`PRE-FREE: ${this.memory.getUsedRegisters().length} used`);
 				this.memory.freeRegister(leftLocation);
 				this.memory.freeRegister(rightLocation);
-				//console.log(`END: ${this.memory.getUsedRegisters().length} used\n`);
-				//console.log(this.memory.registers);
 
 				return new Location("register", resultRegister.loc, "uint8");
 			}
