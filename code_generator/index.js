@@ -69,6 +69,11 @@ class CodeGenerator {
 
         this.statement.generateBlock(this.assembly.currentFunction.block);
 	
+		if (this.assembly.currentFunction.block[this.assembly.currentFunction.block.length - 1].type != Nodes.RETURN_STATEMENT) {
+			//Even functions that don't return anything still need to return from the function
+			this.statement.returnFromFunction();
+		}
+
 		this.assembly.finishFunction();
     }	
 

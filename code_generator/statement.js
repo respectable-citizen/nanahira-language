@@ -28,6 +28,20 @@ class StatementGenerator {
 		}
 	}
 
+	returnFromFunction() {
+		//Clear locals from stack
+		this.assembly.moveStackPointer(-this.assembly.stackPointerOffset);
+		
+		this.assembly.addInstruction(`pop rbp`); //Restore old base pointer
+	
+		let argumentBytes = 8 * this.assembly.currentFunction.parameters.parameters.length; //Arguments are passed as 64 bits (8 bytes)
+		if (argumentBytes) {
+			this.assembly.addInstruction(`ret ${argumentBytes}`); //Skip the part of the stack used for arguments
+		} else {
+			this.assembly.addInstruction(`ret`);
+		}
+	}
+
 	generateBlock(block) {
 		let originalOffset = this.assembly.stackPointerOffset;
         for (let statement of block) this.handleError(this.generateStatement, statement); 
@@ -133,22 +147,12 @@ class StatementGenerator {
 			}
 			this.assembly.addInstruction(`syscall`);
 		} else {
-			//Clear locals from stack
-			this.assembly.moveStackPointer(-this.assembly.stackPointerOffset);
-
 			if (loc) {
 				this.memory.moveLocationIntoRegister("a", loc);
 				this.memory.freeRegister(loc);
 			}
 
-			this.assembly.addInstruction(`pop rbp`); //Restore old base pointer
-		
-			let argumentBytes = 8 * this.assembly.currentFunction.parameters.parameters.length; //Arguments are passed as 64 bits (8 bytes)
-			if (argumentBytes) {
-				this.assembly.addInstruction(`ret ${argumentBytes}`); //Skip the part of the stack used for arguments
-			} else {
-				this.assembly.addInstruction(`ret`);
-			}
+			this.returnFromFunction();
 		}
 	}
 	
