@@ -10,7 +10,20 @@ class ExpressionGenerator {
 		this.memory = memory;
 		this.ast = ast;
 	}
-	
+
+	getFunction(expression) {
+		let func = this.scope.getFunction(expression.identifier.value);
+		if (!func) {
+			//scope.getFunction will only be able to access functions declared in other files, or functions declared in this file that have already been generated
+			//also look in the AST to see if it exists
+			func = this.ast.getFunctionNode(expression.identifier.value);
+			
+			if (!func) throw new Error.Generator(`Function "${expression.identifier.value}" does not exist.`, expression.identifier.start);
+		}
+
+		return func;
+	}
+
 	//Modifies location, must operate on a clone if original must be kept untouched
 	indexIntoLocation(loc, index) {
 		if (index) {
@@ -235,7 +248,8 @@ class ExpressionGenerator {
 
 			throw `Cannot currently handle operator "${expression.operator}"`;
 		} else if (expression.type == Nodes.CALL_EXPRESSION) {
-			let func = this.scope.getFunction(expression.identifier.value);
+			let func = this.getFunction(expression);
+
 			if (expression.identifier.value != "vararg" && func.returnType.value == "void") throw new Error.Generator(`Cannot use return value of function in expression as it returns void`, expression.identifier.start);
 
 			return this.generateCallExpression(expression); //Return data from function is always in rax
@@ -339,8 +353,7 @@ class ExpressionGenerator {
 		if (statement.identifier.value == "vararg") return this.generateVarargCall(statement);
 		//if (statement.identifier.value == "syscall") return this.generateSyscall(statement);
 
-		let func = this.scope.getFunction(statement.identifier.value);
-		if (!func) throw new Error.Generator(`Cannot call function "${statement.identifier.value}" because it does not exist.`, statement.identifier.start);
+		let func = this.getFunction(statement);
 		if (func.external) this.assembly.makeExtern(func.identifier.value);
 
 		if (!func.parameters.varArgs && func.parameters.parameters.length != statement.args.length) throw new Error.Generator(`Function "${statement.identifier.value}" takes ${func.parameters.parameters.length} arguments but ${statement.args.length} were provided.`, statement.identifier.end + 1);

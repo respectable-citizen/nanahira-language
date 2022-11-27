@@ -1,18 +1,5 @@
 //the code here is like, really weird due to the current limitations of the language
 
-void* malloc(uint64 bytes) {
-	asm("mov rax, 9");
-	asm("mov rdi, 0");
-	asm("mov rsi, r8");
-	asm("mov rdx, 3");
-	asm("mov r10, 34");
-	asm("mov r8d, -1");
-	asm("mov r9, 0");
-	asm("syscall");
-
-	return; //Looks like it isn't returning anything but RAX (return register) is already set by the syscall, kinda weird but low priority rn
-}
-
 uint64 strlen(char* str) {
 	uint64 index = 0;
 	while (str[index] != 0) {
@@ -22,19 +9,19 @@ uint64 strlen(char* str) {
 	return index;
 }
 
-char* numberToString(uint32 number) {
-	char* digits = malloc(10);
+char* numberToString(uint64 number) {
+	char* digits = malloc(20);
 
 	uint8 digitIndex = 0;
 	while (number > 0) {
 		uint8 digit = number % 10;
-		digits[9 - digitIndex] = digit + 48;
+		digits[19 - digitIndex] = digit + 48;
 		number /= 10;
 		
 		digitIndex++;
 	}	
 	
-	return digits + (10 - digitIndex);
+	return digits + (20 - digitIndex);
 }
 
 void print(char* str) {
@@ -79,5 +66,18 @@ void printf(char* format, ...) {
 			}
 		}
 	}
+}
+
+void* malloc(uint64 bytes) {
+	asm("mov rax, 9");
+	asm("mov rdi, 0");
+	asm("mov rsi, r8");
+	asm("mov rdx, 3");
+	asm("mov r10, 34");
+	asm("mov r8d, -1");
+	asm("mov r9, 0");
+	asm("syscall");
+
+	return; //this looks like it isn't returning anything but RAX (return register) is already set by the syscall, kinda weird but low priority rn
 }
 
