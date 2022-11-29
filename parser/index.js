@@ -6,7 +6,7 @@ Parser grammar:
 
 program := importStatement* declaration*
 
-declaration := functionDeclaration | variableDeclaration
+declaration := functionDeclaration | variableDeclaration | classDeclaration
 
 parameters := IDENTIFIER IDENTIFIER ("," IDENTIFIER IDENTIFIER)* [ "," "..." ]
 arguments = expression ("," expression)*
@@ -30,8 +30,9 @@ assignmentExpression := IDENTIFIER ( [ "[" [ expression ] "]" ] ["=" expression]
 callExpression := IDENTIFIER "(" [arguments] ")"
 
 //Declarations
-functionDeclaration := dataType IDENTIFIER "(" [parameters] ")" block
+functionDeclaration := ( ( dataType IDENTIFIER ) | "constructor" ) "(" [parameters] ")" block
 variableDeclaration := dataType assignmentExpression ";" //Same as assignmentExpression, but with a data type because the variable is being declared for the first time
+classDeclaration := "class" identifier "{" functionDeclaration* "}"
 
 dataType = IDENTIFIER [ "[" "]" ]
 
@@ -148,7 +149,8 @@ class Parser {
     }
 
     determineDeclarationType() {
-        if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
+      	if (this.peek().type == Tokens.KEYWORD_CLASS) return Nodes.CLASS_DECLARATION;
+		if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
        
 		//Skip pairs of array brackets
 		let offset = 1;
@@ -180,12 +182,18 @@ class Parser {
 
         if (declarationType == Nodes.FUNCTION_DECLARATION) return this.parseFunctionDeclaration();
         if (declarationType == Nodes.VARIABLE_DECLARATION) return this.parseVariableDeclaration();
+        if (declarationType == Nodes.CLASS_DECLARATION) return this.parseClassDeclaration();
         
         this.unexpectedToken();
     }
 
     parseFunctionDeclaration() {
-        let returnType = this.parseDataType();
+        let returnType;
+		
+		if (!(this.peek().type == Tokens.IDENTIFIER && this.peek().value == "constructor")) {
+			returnType = this.parseDataType();
+		}
+
         let identifier = this.expect(Tokens.IDENTIFIER);
         this.expect(Tokens.LEFT_PAREN);
         let parameters = {
@@ -204,9 +212,9 @@ class Parser {
             identifier,
             parameters,
             block,
-			start: returnType.start,
+			start: identifier.start,
 			end,
-			line: returnType.line
+			line: identifier.line
         };
     }
 
@@ -223,6 +231,22 @@ class Parser {
         
 		return assignment;
     }
+
+	parseClassDeclaration() {
+		this.expect(Tokens.KEYWORD_CLASS);
+		let identifier = this.match(Tokens.IDENTIFIER);
+		this.expect(Tokens.LEFT_CURLY_BRACE);
+
+		let functions = [];
+		while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) functions.push(this.parseFunctionDeclaration());
+		this.expect(Tokens.RIGHT_CURLY_BRACE);
+	
+		return {
+			type: Nodes.CLASS_DECLARATION,
+			identifier,
+			functions
+		};
+	}
 
 	parseDataType() {
 		let identifier = this.expect(Tokens.IDENTIFIER);

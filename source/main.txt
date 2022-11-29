@@ -1,5 +1,11 @@
 import stdlib;
 
+//ignore this lil guy he's just chilling here while i develop classes
+class Test {
+	constructor(uint64 number) {
+	}
+}
+
 uint8 main() {
 	uint64 previous = 0;
 	uint64 current = 1;

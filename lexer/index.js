@@ -351,6 +351,10 @@ class Lexer {
 						this.addToken({
                             type: Tokens.KEYWORD_IMPORT
                         });
+					} else if (identifier == "class") {
+						this.addToken({
+							type: Tokens.KEYWORD_CLASS
+						});
 					} else {
                         this.addToken({
                             type: Tokens.IDENTIFIER,
