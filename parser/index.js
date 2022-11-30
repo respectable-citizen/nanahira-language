@@ -183,7 +183,8 @@ class Parser {
         if (declarationType == Nodes.FUNCTION_DECLARATION) return this.parseFunctionDeclaration();
         if (declarationType == Nodes.VARIABLE_DECLARATION) return this.parseVariableDeclaration();
         if (declarationType == Nodes.CLASS_DECLARATION) return this.parseClassDeclaration();
-        
+        if (declarationType == Nodes.CLASS_DECLARATION) console.log("class");
+
         this.unexpectedToken();
     }
 
@@ -234,7 +235,7 @@ class Parser {
 
 	parseClassDeclaration() {
 		this.expect(Tokens.KEYWORD_CLASS);
-		let identifier = this.match(Tokens.IDENTIFIER);
+		let identifier = this.expect(Tokens.IDENTIFIER);
 		this.expect(Tokens.LEFT_CURLY_BRACE);
 
 		let functions = [];

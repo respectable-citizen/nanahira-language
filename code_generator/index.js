@@ -31,6 +31,8 @@ class CodeGenerator {
         }
     }
 
+	generateClass(cla) {}
+
     generateFunction(func) {
 		this.memory.freeAllRegisters(); //Registers are caller-saved so we can safely use all registers
 
@@ -92,6 +94,12 @@ class CodeGenerator {
     run() {
         //if (!this.ast.getFunctionNode("main")) throw "Missing main function.";
 		this.handleImports(this.ast.tree.imports);
+
+        for (let cla of this.ast.classes) {
+			this.statement.handleError(this.generateClass, cla, this, () => {
+				this.assembly.finishFunction.call(this.assembly); //If error occurs we must execute finishFunction to prevent scope-related errors
+			});
+		}
 
         for (let func of this.ast.functions) {
 			this.statement.handleError(this.generateFunction, func, this, () => {
