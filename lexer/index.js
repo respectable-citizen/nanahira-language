@@ -319,7 +319,7 @@ class Lexer {
                 	type: Tokens.DOT_DOT_DOT
                 });
 			} else {
-                if (this.isAlpha(this.peek())) {
+                if (this.isAlpha(this.peek()) || this.peek() == "_") {
                     let identifier = this.get();
                     
                     while (this.isAlphanumeric(this.peek()) || this.peek() == "_") {

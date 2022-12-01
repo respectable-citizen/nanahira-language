@@ -32,7 +32,7 @@ callExpression := IDENTIFIER "(" [arguments] ")"
 //Declarations
 functionDeclaration := ( ( dataType IDENTIFIER ) | "constructor" ) "(" [parameters] ")" block
 variableDeclaration := dataType assignmentExpression ";" //Same as assignmentExpression, but with a data type because the variable is being declared for the first time
-classDeclaration := "class" identifier "{" functionDeclaration* "}"
+classDeclaration := "class" identifier "{" variableDeclaration* functionDeclaration* "}"
 
 dataType = IDENTIFIER [ "[" "]" ]
 
@@ -151,6 +151,7 @@ class Parser {
     determineDeclarationType() {
       	if (this.peek().type == Tokens.KEYWORD_CLASS) return Nodes.CLASS_DECLARATION;
 		if (this.peek().type != Tokens.IDENTIFIER) return Nodes.NONE;
+		if (this.peek().value == "constructor") return Nodes.FUNCTION_DECLARATION;
        
 		//Skip pairs of array brackets
 		let offset = 1;
@@ -238,13 +239,16 @@ class Parser {
 		let identifier = this.expect(Tokens.IDENTIFIER);
 		this.expect(Tokens.LEFT_CURLY_BRACE);
 
+		let variables = [];
 		let functions = [];
-		while (this.peek().type != Tokens.RIGHT_CURLY_BRACE) functions.push(this.parseFunctionDeclaration());
+		while (this.peek().type != Tokens.RIGHT_CURLY_BRACE && this.determineDeclarationType() == Nodes.VARIABLE_DECLARATION) variables.push(this.parseVariableDeclaration());
+		while (this.peek().type != Tokens.RIGHT_CURLY_BRACE && this.determineDeclarationType() == Nodes.FUNCTION_DECLARATION) functions.push(this.parseFunctionDeclaration());
 		this.expect(Tokens.RIGHT_CURLY_BRACE);
 	
 		return {
 			type: Nodes.CLASS_DECLARATION,
 			identifier,
+			variables,
 			functions
 		};
 	}

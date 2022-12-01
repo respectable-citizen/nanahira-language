@@ -2,7 +2,10 @@ import stdlib;
 
 //ignore this lil guy he's just chilling here while i develop classes
 class Test {
-	constructor(uint64 number) {
+	uint64 number;
+
+	constructor(uint64 _number) {
+		number = _number;
 	}
 }
 
@@ -18,3 +21,4 @@ uint8 main() {
 
 	return 0;
 }
+
