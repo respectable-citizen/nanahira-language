@@ -10,6 +10,8 @@ class Test {
 }
 
 uint8 main() {
+	//Test test = new Test(5);
+
 	uint64 previous = 0;
 	uint64 current = 1;
 	for (uint8 i = 1; i < 50; i++) {

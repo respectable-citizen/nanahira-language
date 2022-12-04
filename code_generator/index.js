@@ -31,7 +31,18 @@ class CodeGenerator {
         }
     }
 
-	generateClass(cla) {}
+	generateClass(cla) {
+		let size = cla.variables.reduce((a, b) => {
+			return a + this.memory.getSizeOfDataType(b.dataType);
+		}, 0);
+	
+		this.scope.addDataType({
+			name: cla.identifier.value,
+			size,
+			variables: cla.variables
+		});
+
+	}
 
     generateFunction(func) {
 		this.memory.freeAllRegisters(); //Registers are caller-saved so we can safely use all registers

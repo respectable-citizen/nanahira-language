@@ -142,15 +142,9 @@ class Memory {
 	}
 
 	getSizeOfDataTypeElement(dataType) {
-		let identifier = dataType.identifier.value;
-
-		if (identifier == "uint8" || identifier == "int8" || identifier == "char") return 8;
-		if (identifier == "uint16" || identifier == "int16") return 16;
-		if (identifier == "uint32" || identifier == "int32") return 32;
-		if (identifier == "uint64" || identifier == "int64") return 64;
-		if (identifier == "void") return 0;
-
-		throw `Cannot determine size of data type "${dataType}"`;
+		let dataTypeScope = this.scope.getDataType(dataType.identifier.value);
+		if (!dataTypeScope || dataTypeScope.size === undefined) throw `Cannot determine size of data type "${dataType}"`;
+		return dataTypeScope.size;
 	}
 
 	//Returns size in bits of a given data type
